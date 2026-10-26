@@ -1,5 +1,5 @@
 // Minimal offline support: network-first for pages, cache-first for hashed assets.
-const CACHE = 'timestamp-v1';
+const CACHE = 'stampio-v1';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));

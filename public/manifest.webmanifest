@@ -1,6 +1,6 @@
 {
-  "name": "Timestamp",
-  "short_name": "Timestamp",
+  "name": "Stampio",
+  "short_name": "Stampio",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

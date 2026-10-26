@@ -1,6 +1,6 @@
-# Timestamp
+# Stampio
 
-A tiny web app for logging when things happen — wake-up, lunch, meditation, naps, anything.
+Stampio is a tiny web app for logging when things happen — wake-up, lunch, meditation, naps, anything.
 Tap an activity's button to record the current time. Built to be added to the iPhone home screen.
 
 - **Track**: one button per activity; tap to log (with Undo). **Edit** to rename, recolor or delete an activity; **New activity** to add one.

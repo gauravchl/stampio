@@ -55,7 +55,7 @@ export function fromCsv(text: string) {
 
 /** On iPhone, the share sheet ("Save to Files") is more reliable than a download link. */
 export async function saveCsv(csv: string) {
-  const name = `timestamps-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+  const name = `stampio-${format(new Date(), 'yyyy-MM-dd')}.csv`;
   const file = new File([csv], name, { type: 'text/csv' });
   const touch = navigator.maxTouchPoints > 0;
   if (touch && navigator.canShare?.({ files: [file] })) {

@@ -89,7 +89,7 @@ export function install(setData: (fn: (d: Data) => Data) => void) {
   };
 
   console.info(
-    '%cTimestamp dev tools%c\n  seedTestData(days = 30)  add sample data for every activity\n  clearTestData()          remove sample data (keeps your own logs)',
+    '%cStampio dev tools%c\n  seedTestData(days = 30)  add sample data for every activity\n  clearTestData()          remove sample data (keeps your own logs)',
     'font-weight:bold', '',
   );
 }

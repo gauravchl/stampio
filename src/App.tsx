@@ -1,19 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentType, type SVGProps } from 'react';
 import { useStore } from './store';
 import Track from './pages/Track';
 import Chart from './pages/Chart';
 import History from './pages/History';
+import { HistoryIcon, TodayIcon, TrendsIcon } from './components/Icons';
 
-type Tab = 'track' | 'chart' | 'history';
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'track', label: 'Track', icon: '⏱️' },
-  { id: 'chart', label: 'Chart', icon: '📈' },
-  { id: 'history', label: 'History', icon: '🗂️' },
+type Tab = 'today' | 'trends' | 'history';
+const TABS: { id: Tab; label: string; Icon: ComponentType<SVGProps<SVGSVGElement>> }[] = [
+  { id: 'today', label: 'Today', Icon: TodayIcon },
+  { id: 'trends', label: 'Trends', Icon: TrendsIcon },
+  { id: 'history', label: 'History', Icon: HistoryIcon },
 ];
 
 const fromHash = (): Tab => {
   const h = location.hash.slice(1) as Tab;
-  return TABS.some((t) => t.id === h) ? h : 'track';
+  return TABS.some((t) => t.id === h) ? h : 'today';
 };
 
 export default function App() {
@@ -31,6 +32,10 @@ export default function App() {
   }, []);
 
   const go = (t: Tab) => {
+    if (t === tab) {
+      scrollTo({ top: 0, behavior: 'smooth' }); // tapping the active tab scrolls to top, as on iOS
+      return;
+    }
     history.replaceState(null, '', `#${t}`);
     setTab(t);
     scrollTo(0, 0);
@@ -38,16 +43,16 @@ export default function App() {
 
   return (
     <div className="app">
-      <main className="page">
-        {tab === 'track' && <Track store={store} />}
-        {tab === 'chart' && <Chart store={store} />}
+      <main className="page" key={tab}>
+        {tab === 'today' && <Track store={store} />}
+        {tab === 'trends' && <Chart store={store} />}
         {tab === 'history' && <History store={store} />}
       </main>
       <nav className="tabbar">
-        {TABS.map((t) => (
-          <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => go(t.id)}>
-            <span className="tab-icon">{t.icon}</span>
-            <span>{t.label}</span>
+        {TABS.map(({ id, label, Icon }) => (
+          <button key={id} className={tab === id ? 'active' : ''} onClick={() => go(id)} aria-current={tab === id ? 'page' : undefined}>
+            <Icon width={25} height={25} />
+            <span>{label}</span>
           </button>
         ))}
       </nav>

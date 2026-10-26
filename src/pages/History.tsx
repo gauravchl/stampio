@@ -4,21 +4,24 @@ import { mergeRows, type Entry, type Store } from '../store';
 import { fromCsv, saveCsv, toCsv } from '../csv';
 import Sheet from '../components/Sheet';
 import Header from '../components/Header';
+import { ChevronRight, ChevronUpDown, ImportIcon, PlusIcon, ShareIcon } from '../components/Icons';
 import { displayColor, useTheme } from '../theme';
+import { fmtTime } from '../format';
 
 const PAGE = 200;
+const ENTRY_FORM_ID = 'entry-form';
 const toLocalInput = (ts: number) => format(ts, "yyyy-MM-dd'T'HH:mm");
 const dayLabel = (ts: number) =>
-  isToday(ts) ? 'Today' : isYesterday(ts) ? 'Yesterday' : format(ts, 'EEEE, MMM d, yyyy');
+  isToday(ts) ? 'Today' : isYesterday(ts) ? 'Yesterday' : format(ts, 'EEEE, MMMM d');
 
 export default function History({ store }: { store: Store }) {
   const { data, logEntry, updateEntry, deleteEntry, replaceData } = store;
+  const { theme } = useTheme();
   const [filter, setFilter] = useState('all');
   const [limit, setLimit] = useState(PAGE);
   const [editing, setEditing] = useState<Entry | null>(null);
   const [adding, setAdding] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const { theme } = useTheme();
 
   const byId = useMemo(() => new Map(data.activities.map((a) => [a.id, a])), [data.activities]);
   const list = useMemo(
@@ -38,53 +41,62 @@ export default function History({ store }: { store: Store }) {
       const rows = fromCsv(await file.text());
       const { data: next, added } = mergeRows(data, rows);
       replaceData(next);
-      alert(`Imported ${added} new timestamp${added === 1 ? '' : 's'} (${rows.length - added} already present).`);
+      alert(`Imported ${added} new entr${added === 1 ? 'y' : 'ies'}. ${rows.length - added} were already here.`);
     } catch (err) {
-      alert(`Import failed: ${(err as Error).message}`);
+      alert(`Couldn’t import that file. ${(err as Error).message}`);
     }
   };
 
+  const filterName = filter === 'all' ? 'All Activities' : byId.get(filter)?.name ?? 'All Activities';
+
   return (
     <>
-      <Header title="History" sub={`${data.entries.length} timestamps logged`}>
-        <button className="link" onClick={() => setAdding(true)}>＋ Add</button>
-      </Header>
+      <Header
+        title="History"
+        actions={
+          <button className="circle-btn tint" onClick={() => setAdding(true)} aria-label="Add entry" disabled={!data.activities.length}>
+            <PlusIcon width={16} height={16} />
+          </button>
+        }
+      />
 
-      <div className="actions">
-        <button className="secondary" onClick={() => saveCsv(toCsv(data))} disabled={!data.entries.length}>
-          ⬇︎ Export CSV
-        </button>
-        <button className="secondary" onClick={() => fileRef.current?.click()}>⬆︎ Import CSV</button>
-        <input
-          ref={fileRef} type="file" accept=".csv,text/csv" hidden
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) onImport(f);
-            e.target.value = '';
-          }}
-        />
+      <div className="group list">
+        <label className="row picker-row">
+          <span className="row-title">Show</span>
+          <span className="picker-value">
+            {filterName}
+            <ChevronUpDown width={14} height={14} />
+          </span>
+          <select value={filter} onChange={(e) => { setFilter(e.target.value); setLimit(PAGE); }} aria-label="Filter by activity">
+            <option value="all">All Activities</option>
+            {data.activities.map((a) => (
+              <option key={a.id} value={a.id}>{a.emoji} {a.name}</option>
+            ))}
+          </select>
+        </label>
       </div>
 
-      <select className="select" value={filter} onChange={(e) => { setFilter(e.target.value); setLimit(PAGE); }}>
-        <option value="all">All activities</option>
-        {data.activities.map((a) => (
-          <option key={a.id} value={a.id}>{a.emoji} {a.name}</option>
-        ))}
-      </select>
-
-      {!list.length && <div className="empty">Nothing logged yet.</div>}
+      {!list.length && (
+        <div className="empty standalone">
+          <b>No Entries</b>
+          <span>Times you log on the Today tab appear here.</span>
+        </div>
+      )}
 
       {groups.map((g) => (
-        <section key={g.day} className="day">
-          <h3>{g.day}</h3>
-          <div className="card list">
+        <section key={g.day}>
+          <h3 className="list-header">{g.day}</h3>
+          <div className="group list">
             {g.items.map((e) => {
               const a = byId.get(e.activityId);
               return (
-                <button key={e.id} className="list-row" onClick={() => setEditing(e)}>
-                  <span className="dot" style={{ background: a && displayColor(a.color, theme) }} />
-                  <span className="grow">{a?.emoji} {a?.name ?? 'Unknown'}</span>
-                  <span className="time">{format(e.ts, 'HH:mm')}</span>
+                <button key={e.id} className="row entry-row" onClick={() => setEditing(e)}>
+                  <span className="glyph" style={{ '--c': a && displayColor(a.color, theme) } as React.CSSProperties}>
+                    {a?.emoji ?? '⏱️'}
+                  </span>
+                  <span className="row-title grow">{a?.name ?? 'Unknown'}</span>
+                  <span className="row-detail">{fmtTime(e.ts)}</span>
+                  <ChevronRight className="chevron" width={14} height={14} />
                 </button>
               );
             })}
@@ -93,11 +105,37 @@ export default function History({ store }: { store: Store }) {
       ))}
 
       {list.length > limit && (
-        <button className="secondary wide" onClick={() => setLimit((l) => l + PAGE)}>Show more</button>
+        <div className="group">
+          <button className="row tint center" onClick={() => setLimit((l) => l + PAGE)}>Show More</button>
+        </div>
       )}
 
+      <h3 className="list-header">Data</h3>
+      <div className="group list">
+        <button className="row tint" onClick={() => saveCsv(toCsv(data))} disabled={!data.entries.length}>
+          <ShareIcon width={19} height={19} /> Export as CSV
+        </button>
+        <button className="row tint" onClick={() => fileRef.current?.click()}>
+          <ImportIcon width={19} height={19} /> Import from CSV
+        </button>
+      </div>
+      <p className="footnote">
+        {data.entries.length} {data.entries.length === 1 ? 'entry' : 'entries'} stored on this device. Export now and then to keep a backup.
+      </p>
+      <input
+        ref={fileRef} type="file" accept=".csv,text/csv" hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onImport(f);
+          e.target.value = '';
+        }}
+      />
+
       {editing && (
-        <Sheet title={`Edit ${byId.get(editing.activityId)?.name ?? ''}`} onClose={() => setEditing(null)}>
+        <Sheet
+          title={byId.get(editing.activityId)?.name ?? 'Entry'} onClose={() => setEditing(null)}
+          confirmLabel="Done" formId={ENTRY_FORM_ID}
+        >
           <EntryForm
             initialTs={editing.ts}
             onSave={(_, ts) => { updateEntry(editing.id, ts); setEditing(null); }}
@@ -106,9 +144,10 @@ export default function History({ store }: { store: Store }) {
         </Sheet>
       )}
       {adding && (
-        <Sheet title="Add a missed timestamp" onClose={() => setAdding(false)}>
+        <Sheet title="New Entry" onClose={() => setAdding(false)} confirmLabel="Add" formId={ENTRY_FORM_ID}>
           <EntryForm
             activities={data.activities}
+            initialActivityId={filter === 'all' ? undefined : filter}
             initialTs={Date.now()}
             onSave={(activityId, ts) => { logEntry(activityId!, ts); setAdding(false); }}
           />
@@ -118,33 +157,47 @@ export default function History({ store }: { store: Store }) {
   );
 }
 
-function EntryForm({ activities, initialTs, onSave, onDelete }: {
+function EntryForm({ activities, initialActivityId, initialTs, onSave, onDelete }: {
   activities?: Store['data']['activities'];
+  initialActivityId?: string;
   initialTs: number;
   onSave: (activityId: string | undefined, ts: number) => void;
   onDelete?: () => void;
 }) {
   const [value, setValue] = useState(toLocalInput(initialTs));
-  const [activityId, setActivityId] = useState(activities?.[0]?.id);
+  const [activityId, setActivityId] = useState(initialActivityId ?? activities?.[0]?.id);
   const ts = new Date(value).getTime();
   const valid = !Number.isNaN(ts) && (!activities || !!activityId);
+  const current = activities?.find((a) => a.id === activityId);
 
   return (
-    <form className="form" onSubmit={(e) => { e.preventDefault(); if (valid) onSave(activityId, ts); }}>
-      {activities && (
-        <label className="field">
-          <span>Activity</span>
-          <select className="select" value={activityId} onChange={(e) => setActivityId(e.target.value)}>
-            {activities.map((a) => <option key={a.id} value={a.id}>{a.emoji} {a.name}</option>)}
-          </select>
+    <form id={ENTRY_FORM_ID} className="form" onSubmit={(e) => { e.preventDefault(); if (valid) onSave(activityId, ts); }}>
+      <div className="group list">
+        {activities && (
+          <label className="row picker-row">
+            <span className="row-title">Activity</span>
+            <span className="picker-value">
+              {current ? `${current.emoji} ${current.name}` : 'Choose'}
+              <ChevronUpDown width={14} height={14} />
+            </span>
+            <select value={activityId} onChange={(e) => setActivityId(e.target.value)} aria-label="Activity">
+              {activities.map((a) => <option key={a.id} value={a.id}>{a.emoji} {a.name}</option>)}
+            </select>
+          </label>
+        )}
+        <label className="row">
+          <span className="row-title grow">Time</span>
+          <input
+            className="datetime" type="datetime-local" value={value}
+            max={toLocalInput(Date.now())} onChange={(e) => setValue(e.target.value)}
+          />
         </label>
+      </div>
+      {onDelete && (
+        <div className="group">
+          <button type="button" className="row destructive center" onClick={onDelete}>Delete Entry</button>
+        </div>
       )}
-      <label className="field">
-        <span>Date & time</span>
-        <input type="datetime-local" value={value} onChange={(e) => setValue(e.target.value)} />
-      </label>
-      <button className="primary" type="submit" disabled={!valid}>Save</button>
-      {onDelete && <button type="button" className="danger" onClick={onDelete}>Delete timestamp</button>}
     </form>
   );
 }

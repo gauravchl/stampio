@@ -1,18 +1,40 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 
-export default function Sheet({ title, onClose, children }: {
+/** iOS page sheet: grabber, Cancel on the left, title, and a bold confirm action on the right. */
+export default function Sheet({ title, onClose, confirmLabel, confirmDisabled, formId, children }: {
   title: string;
   onClose: () => void;
+  confirmLabel?: string;
+  confirmDisabled?: boolean;
+  /** Id of the form the confirm button submits. */
+  formId?: string;
   children: ReactNode;
 }) {
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      removeEventListener('keydown', onKey);
+    };
+  }, [onClose]);
+
   return (
     <div className="sheet-backdrop" onClick={onClose}>
-      <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={title}>
-        <div className="sheet-head">
+      <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={title}>
+        <div className="grabber" />
+        <div className="sheet-nav">
+          <button className="nav-btn" onClick={onClose}>Cancel</button>
           <h2>{title}</h2>
-          <button className="link" onClick={onClose}>Close</button>
+          {confirmLabel ? (
+            <button className="nav-btn strong" type="submit" form={formId} disabled={confirmDisabled}>
+              {confirmLabel}
+            </button>
+          ) : <span />}
         </div>
-        {children}
+        <div className="sheet-body">{children}</div>
       </div>
     </div>
   );

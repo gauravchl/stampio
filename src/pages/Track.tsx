@@ -1,28 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { format, isToday, isYesterday } from 'date-fns';
+import { format, isToday } from 'date-fns';
 import { nextColor, type Activity, type Entry, type Store } from '../store';
 import Sheet from '../components/Sheet';
-import ActivityForm from '../components/ActivityForm';
+import ActivityForm, { ACTIVITY_FORM_ID } from '../components/ActivityForm';
 import Header from '../components/Header';
+import { PlusIcon } from '../components/Icons';
 import { displayColor, useTheme } from '../theme';
+import { fmtTime, relativeDay, timeParts } from '../format';
+import { haptic } from '../haptics';
 
-const when = (ts: number) => {
-  const d = new Date(ts);
-  if (isToday(d)) return format(d, 'HH:mm');
-  if (isYesterday(d)) return `Yesterday ${format(d, 'HH:mm')}`;
-  return format(d, 'MMM d, HH:mm');
-};
+type SheetState = { mode: 'new' } | { mode: 'edit'; activity: Activity } | null;
 
 export default function Track({ store }: { store: Store }) {
   const { data, logEntry, deleteEntry, addActivity, updateActivity, deleteActivity } = store;
-  const [editing, setEditing] = useState(false);
-  const [sheet, setSheet] = useState<{ mode: 'new' } | { mode: 'edit'; activity: Activity } | null>(null);
-  const [toast, setToast] = useState<{ entry: Entry; name: string } | null>(null);
-  const [flash, setFlash] = useState<string | null>(null);
-  const toastTimer = useRef<number>(undefined);
   const { theme } = useTheme();
+  const [editing, setEditing] = useState(false);
+  const [sheet, setSheet] = useState<SheetState>(null);
+  const [valid, setValid] = useState(false);
+  const [banner, setBanner] = useState<{ entry: Entry; activity: Activity } | null>(null);
+  const [pulse, setPulse] = useState<string | null>(null);
+  const bannerTimer = useRef<number>(undefined);
 
-  // Re-render every 30s so "today" counts and relative labels stay fresh.
+  // Re-render every 30s so "Today"/"Yesterday" captions stay fresh.
   const [, tick] = useState(0);
   useEffect(() => {
     const t = setInterval(() => tick((n) => n + 1), 30_000);
@@ -40,64 +39,103 @@ export default function Track({ store }: { store: Store }) {
     return m;
   }, [data.entries]);
 
+  const openSheet = (s: SheetState) => {
+    setValid(s?.mode === 'edit');
+    setSheet(s);
+  };
+
   const tap = (a: Activity) => {
     if (editing) {
-      setSheet({ mode: 'edit', activity: a });
+      openSheet({ mode: 'edit', activity: a });
       return;
     }
+    haptic();
     const entry = logEntry(a.id);
-    setFlash(a.id);
-    setTimeout(() => setFlash(null), 450);
-    setToast({ entry, name: a.name });
-    clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(null), 4000);
+    setPulse(a.id);
+    setTimeout(() => setPulse(null), 600);
+    setBanner({ entry, activity: a });
+    clearTimeout(bannerTimer.current);
+    bannerTimer.current = window.setTimeout(() => setBanner(null), 4000);
   };
 
   return (
     <>
-      <Header title="Track" sub={format(new Date(), 'EEEE, MMM d')}>
-        <button className="link" onClick={() => setEditing((v) => !v)}>
-          {editing ? 'Done' : 'Edit'}
-        </button>
-      </Header>
+      <Header
+        title="Today"
+        sub={format(new Date(), 'EEEE, MMMM d')}
+        actions={
+          data.activities.length > 0 && (
+            <button className="nav-btn" onClick={() => setEditing((v) => !v)}>
+              {editing ? <b>Done</b> : 'Edit'}
+            </button>
+          )
+        }
+      />
 
-      {editing && <p className="hint">Tap an activity to rename, recolor or delete it.</p>}
+      <div className="section-head">
+        <h2>Activities</h2>
+        <span className="section-note">{editing ? 'Tap one to edit' : 'Tap to log the time'}</span>
+      </div>
 
       <div className="grid">
         {data.activities.map((a) => {
           const s = stats.get(a.id);
+          const t = s?.last ? timeParts(s.last) : null;
+          const caption = editing
+            ? 'Edit'
+            : !s?.last
+              ? 'No logs yet'
+              : s.today > 1
+                ? `Today · ${s.today} times`
+                : relativeDay(s.last);
           return (
             <button
               key={a.id}
-              className={`tile ${flash === a.id ? 'flash' : ''} ${editing ? 'wiggle' : ''}`}
+              className={`tile ${pulse === a.id ? 'pulse' : ''} ${editing ? 'jiggle' : ''}`}
               style={{ '--c': displayColor(a.color, theme) } as React.CSSProperties}
               onClick={() => tap(a)}
+              aria-label={editing ? `Edit ${a.name}` : `Log ${a.name}`}
             >
-              <span className="tile-emoji">{a.emoji}</span>
-              <span className="tile-name">{a.name}</span>
-              <span className="tile-meta">
-                {s?.last ? `Last ${when(s.last)}` : 'Not logged yet'}
+              <span className="tile-head">
+                <span className="glyph">{a.emoji}</span>
+                <span className="tile-name">{a.name}</span>
               </span>
-              {!!s?.today && <span className="badge">{s.today}× today</span>}
+              <span className="tile-value">
+                {t ? (
+                  <>
+                    <span className="num">{t.main}</span>
+                    {t.period && <span className="unit">{t.period}</span>}
+                  </>
+                ) : (
+                  <span className="num placeholder">––</span>
+                )}
+              </span>
+              <span className={`tile-caption ${editing ? 'tint' : ''}`}>{caption}</span>
             </button>
           );
         })}
-        <button className="tile add" onClick={() => setSheet({ mode: 'new' })}>
-          <span className="tile-emoji">＋</span>
-          <span className="tile-name">New activity</span>
+      </div>
+
+      <div className="group">
+        <button className="row tint" onClick={() => openSheet({ mode: 'new' })}>
+          <PlusIcon width={18} height={18} /> Add Activity
         </button>
       </div>
 
-      {toast && (
-        <div className="toast">
-          <span>
-            Logged <b>{toast.name}</b> at {format(toast.entry.ts, 'HH:mm')}
+      {banner && (
+        <div className="banner" role="status" key={banner.entry.id}>
+          <span className="glyph" style={{ '--c': displayColor(banner.activity.color, theme) } as React.CSSProperties}>
+            {banner.activity.emoji}
+          </span>
+          <span className="banner-text">
+            <b>{banner.activity.name}</b>
+            <span>Logged at {fmtTime(banner.entry.ts)}</span>
           </span>
           <button
-            className="link"
+            className="banner-btn"
             onClick={() => {
-              deleteEntry(toast.entry.id);
-              setToast(null);
+              deleteEntry(banner.entry.id);
+              setBanner(null);
             }}
           >
             Undo
@@ -106,9 +144,13 @@ export default function Track({ store }: { store: Store }) {
       )}
 
       {sheet?.mode === 'new' && (
-        <Sheet title="New activity" onClose={() => setSheet(null)}>
+        <Sheet
+          title="New Activity" onClose={() => setSheet(null)}
+          confirmLabel="Add" confirmDisabled={!valid} formId={ACTIVITY_FORM_ID}
+        >
           <ActivityForm
             initial={{ name: '', emoji: '⏱️', color: nextColor(data.activities) }}
+            onValidChange={setValid}
             onSave={(v) => {
               addActivity(v);
               setSheet(null);
@@ -117,16 +159,20 @@ export default function Track({ store }: { store: Store }) {
         </Sheet>
       )}
       {sheet?.mode === 'edit' && (
-        <Sheet title="Edit activity" onClose={() => setSheet(null)}>
+        <Sheet
+          title="Edit Activity" onClose={() => setSheet(null)}
+          confirmLabel="Done" confirmDisabled={!valid} formId={ACTIVITY_FORM_ID}
+        >
           <ActivityForm
             initial={sheet.activity}
+            onValidChange={setValid}
             onSave={(v) => {
               updateActivity(sheet.activity.id, v);
               setSheet(null);
             }}
             onDelete={() => {
               const n = data.entries.filter((e) => e.activityId === sheet.activity.id).length;
-              if (confirm(`Delete "${sheet.activity.name}" and its ${n} logged timestamp${n === 1 ? '' : 's'}?`)) {
+              if (confirm(`Delete “${sheet.activity.name}”? This also deletes its ${n} logged time${n === 1 ? '' : 's'}.`)) {
                 deleteActivity(sheet.activity.id);
                 setSheet(null);
               }

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFB03A"/>
+      <stop offset="0.55" stop-color="#FF7246"/>
+      <stop offset="1" stop-color="#FF3D5E"/>
+    </linearGradient>
+    <radialGradient id="sheen" cx="0.5" cy="0" r="0.9">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ink" gradientUnits="userSpaceOnUse" x1="0" y1="152" x2="0" y2="872">
+      <stop offset="0" stop-color="#FF8A3D"/>
+      <stop offset="1" stop-color="#FF3D5E"/>
+    </linearGradient>
+    <radialGradient id="face" cx="0.5" cy="0.32" r="0.75">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#FFF4EE"/>
+    </radialGradient>
+    <filter id="lift" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="22" stdDeviation="28" flood-color="#8A1A00" flood-opacity="0.28"/>
+    </filter>
+    <filter id="dot" x="-60%" y="-60%" width="220%" height="220%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#8A1A00" flood-opacity="0.3"/>
+    </filter>
+    <clipPath id="shape"><rect width="1024" height="1024" rx="229"/></clipPath>
+  </defs>
+  <g clip-path="url(#shape)">
+    <rect width="1024" height="1024" fill="url(#bg)"/>
+    <rect width="1024" height="1024" fill="url(#sheen)"/>
+    <circle cx="512" cy="512" r="360" fill="url(#face)" filter="url(#lift)"/>
+    <g stroke="#FF7A45" stroke-linecap="round"></g>
+    <line x1="512" y1="512" x2="653.4" y2="370.6" stroke="url(#ink)" stroke-width="72" stroke-linecap="round"/>
+    <circle cx="512" cy="512" r="52" fill="url(#ink)"/>
+    
+    <circle cx="653.4" cy="370.6" r="92" fill="url(#ink)" stroke="#fff" stroke-width="26" filter="url(#dot)"/>
+  </g>
+</svg>

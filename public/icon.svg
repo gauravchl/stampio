@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFB03A"/>
+      <stop offset="0.55" stop-color="#FF7246"/>
+      <stop offset="1" stop-color="#FF3D5E"/>
+    </linearGradient>
+    <radialGradient id="sheen" cx="0.5" cy="0" r="0.9">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ink" gradientUnits="userSpaceOnUse" x1="0" y1="182" x2="0" y2="842">
+      <stop offset="0" stop-color="#FF8A3D"/>
+      <stop offset="1" stop-color="#FF3D5E"/>
+    </linearGradient>
+    <radialGradient id="face" cx="0.5" cy="0.32" r="0.75">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#FFF4EE"/>
+    </radialGradient>
+    <filter id="lift" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="22" stdDeviation="28" flood-color="#8A1A00" flood-opacity="0.28"/>
+    </filter>
+    <filter id="dot" x="-60%" y="-60%" width="220%" height="220%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#8A1A00" flood-opacity="0.3"/>
+    </filter>
+    
+  </defs>
+  <g >
+    <rect width="1024" height="1024" fill="url(#bg)"/>
+    <rect width="1024" height="1024" fill="url(#sheen)"/>
+    <circle cx="512" cy="512" r="330" fill="url(#face)" filter="url(#lift)"/>
+    <g stroke="#FF7A45" stroke-linecap="round"><line x1="512.0" y1="216.0" x2="512.0" y2="262.0" stroke-width="24" stroke-opacity="0.55"/><line x1="660.0" y1="255.7" x2="647.0" y2="278.2" stroke-width="13" stroke-opacity="0.4"/><line x1="768.3" y1="364.0" x2="745.8" y2="377.0" stroke-width="13" stroke-opacity="0.4"/><line x1="808.0" y1="512.0" x2="762.0" y2="512.0" stroke-width="24" stroke-opacity="0.55"/><line x1="768.3" y1="660.0" x2="745.8" y2="647.0" stroke-width="13" stroke-opacity="0.4"/><line x1="660.0" y1="768.3" x2="647.0" y2="745.8" stroke-width="13" stroke-opacity="0.4"/><line x1="512.0" y1="808.0" x2="512.0" y2="762.0" stroke-width="24" stroke-opacity="0.55"/><line x1="364.0" y1="768.3" x2="377.0" y2="745.8" stroke-width="13" stroke-opacity="0.4"/><line x1="255.7" y1="660.0" x2="278.2" y2="647.0" stroke-width="13" stroke-opacity="0.4"/><line x1="216.0" y1="512.0" x2="262.0" y2="512.0" stroke-width="24" stroke-opacity="0.55"/><line x1="255.7" y1="364.0" x2="278.2" y2="377.0" stroke-width="13" stroke-opacity="0.4"/><line x1="364.0" y1="255.7" x2="377.0" y2="278.2" stroke-width="13" stroke-opacity="0.4"/></g>
+    <line x1="512" y1="512" x2="657.7" y2="366.3" stroke="url(#ink)" stroke-width="46" stroke-linecap="round"/>
+    <circle cx="512" cy="512" r="40" fill="url(#ink)"/>
+    <circle cx="512" cy="512" r="14" fill="#fff"/>
+    <circle cx="657.7" cy="366.3" r="64" fill="url(#ink)" stroke="#fff" stroke-width="18" filter="url(#dot)"/>
+  </g>
+</svg>

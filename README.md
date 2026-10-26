@@ -1,3 +1,5 @@
+<img src="public/favicon.svg" width="72" alt="Stampio app icon">
+
 # Stampio
 
 Stampio is a tiny web app for logging when things happen like wake-up, lunch, meditation, naps, anything.
@@ -31,12 +33,13 @@ All data lives in `localStorage` on the device. Nothing is sent anywhere.
 ## Develop
 
 ```sh
-npm install
-npm run dev      # http://localhost:5173 (also printed with your LAN IP)
-npm run build    # outputs static files to dist/
+pnpm install
+pnpm dev         # http://localhost:5173 (also printed with your LAN IP)
+pnpm build       # outputs static files to dist/
+pnpm icons       # regenerate the app icon and favicon from scripts/make-icons.mjs
 ```
 
-To try it on your phone, open the LAN address that `npm run dev` prints while on the same Wi-Fi.
+To try it on your phone, open the LAN address that `pnpm dev` prints while on the same Wi-Fi.
 
 
 **Notes**

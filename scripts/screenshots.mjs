@@ -1,6 +1,6 @@
 // Regenerates the README screenshots in Safari's engine at iPhone size.
-// First run: npx playwright install webkit
-// Then:      npm run screenshots
+// First run: pnpm exec playwright install webkit
+// Then:      pnpm screenshots
 import { createServer } from 'vite';
 import { webkit, devices } from 'playwright';
 import { mkdir } from 'node:fs/promises';

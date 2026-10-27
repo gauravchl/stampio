@@ -3,6 +3,7 @@ import { format, isToday, isYesterday } from 'date-fns';
 import { mergeRows, type Entry, type Store } from '../store';
 import { fromCsv, saveCsv, toCsv } from '../csv';
 import Sheet from '../components/Sheet';
+import ConfirmDialog from '../components/ConfirmDialog';
 import Header from '../components/Header';
 import { ChevronRight, ChevronUpDown, GlobeIcon, ImportIcon, MailIcon, PlusIcon, ShareIcon } from '../components/Icons';
 import { displayColor, useTheme } from '../theme';
@@ -21,6 +22,7 @@ export default function History({ store }: { store: Store }) {
   const [limit, setLimit] = useState(PAGE);
   const [editing, setEditing] = useState<Entry | null>(null);
   const [adding, setAdding] = useState(false);
+  const [confirmingDeleteAll, setConfirmingDeleteAll] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const byId = useMemo(() => new Map(data.activities.map((a) => [a.id, a])), [data.activities]);
@@ -47,6 +49,13 @@ export default function History({ store }: { store: Store }) {
       alert(`Couldn’t import that file. ${(err as Error).message}`);
     }
   };
+
+  const deleteAll = () => {
+    replaceData({ activities: [], entries: [] });
+    setFilter('all');
+    setConfirmingDeleteAll(false);
+  };
+  const nActs = data.activities.length, nEntries = data.entries.length;
 
   const filterName = filter === 'all' ? 'All Activities' : byId.get(filter)?.name ?? 'All Activities';
 
@@ -120,6 +129,11 @@ export default function History({ store }: { store: Store }) {
           <ImportIcon width={19} height={19} /> Import from CSV
         </button>
       </div>
+      <div className="group list">
+        <button className="row destructive" onClick={() => setConfirmingDeleteAll(true)} disabled={!data.activities.length && !data.entries.length}>
+          Delete All Data
+        </button>
+      </div>
       <p className="footnote">
         {data.entries.length} {data.entries.length === 1 ? 'entry' : 'entries'} stored on this device. Export now and then to keep a backup.
       </p>
@@ -171,6 +185,15 @@ export default function History({ store }: { store: Store }) {
             onSave={(activityId, ts) => { logEntry(activityId!, ts); setAdding(false); }}
           />
         </Sheet>
+      )}
+      {confirmingDeleteAll && (
+        <ConfirmDialog
+          title="Delete All Data?"
+          message={`This removes ${nActs} activit${nActs === 1 ? 'y' : 'ies'} and ${nEntries} logged time${nEntries === 1 ? '' : 's'} from this device. This can’t be undone, so export a CSV first if you want a backup.`}
+          confirmLabel="Delete All"
+          onConfirm={deleteAll}
+          onCancel={() => setConfirmingDeleteAll(false)}
+        />
       )}
     </>
   );

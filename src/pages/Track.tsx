@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { format, isToday } from 'date-fns';
 import { nextColor, type Activity, type Entry, type Store } from '../store';
 import Sheet from '../components/Sheet';
+import ConfirmDialog from '../components/ConfirmDialog';
 import ActivityForm, { ACTIVITY_FORM_ID } from '../components/ActivityForm';
 import Header from '../components/Header';
 import { PlusIcon } from '../components/Icons';
@@ -18,6 +19,7 @@ export default function Track({ store }: { store: Store }) {
   const [editing, setEditing] = useState(false);
   const [sheet, setSheet] = useState<SheetState>(null);
   const [valid, setValid] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [banner, setBanner] = useState<{ entry: Entry; activity: Activity } | null>(null);
   const [pulse, setPulse] = useState<string | null>(null);
   const bannerTimer = useRef<number>(undefined);
@@ -173,16 +175,25 @@ export default function Track({ store }: { store: Store }) {
               updateActivity(sheet.activity.id, v);
               setSheet(null);
             }}
-            onDelete={() => {
-              const n = data.entries.filter((e) => e.activityId === sheet.activity.id).length;
-              if (confirm(`Delete “${sheet.activity.name}”? This also deletes its ${n} logged time${n === 1 ? '' : 's'}.`)) {
-                deleteActivity(sheet.activity.id);
-                setSheet(null);
-              }
-            }}
+            onDelete={() => setConfirmingDelete(true)}
           />
         </Sheet>
       )}
+      {confirmingDelete && sheet?.mode === 'edit' && (() => {
+        const n = data.entries.filter((e) => e.activityId === sheet.activity.id).length;
+        return (
+          <ConfirmDialog
+            title={`Delete “${sheet.activity.name}”?`}
+            message={`This also deletes its ${n} logged time${n === 1 ? '' : 's'}.`}
+            onConfirm={() => {
+              deleteActivity(sheet.activity.id);
+              setConfirmingDelete(false);
+              setSheet(null);
+            }}
+            onCancel={() => setConfirmingDelete(false)}
+          />
+        );
+      })()}
     </>
   );
 }

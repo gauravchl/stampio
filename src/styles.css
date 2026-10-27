@@ -336,6 +336,33 @@ a.row:focus-visible { outline: 2px solid var(--tint); outline-offset: -2px; }
 .sheet-nav .nav-btn:first-child { justify-self: start; }
 .sheet-body { overflow: auto; padding: 8px 16px calc(env(safe-area-inset-bottom) + 24px); }
 
+/* ---------- alert ---------- */
+.alert-backdrop {
+  position: fixed; inset: 0; z-index: 40;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+  animation: fade 0.2s ease;
+}
+.alert {
+  width: 270px; max-width: 100%;
+  background: var(--sheet-card);
+  border-radius: 14px;
+  overflow: hidden;
+  text-align: center;
+  animation: alert-in 0.3s var(--ease-spring);
+}
+@keyframes alert-in { from { transform: scale(1.15); opacity: 0; } }
+.alert-text { padding: 19px 16px 18px; }
+.alert-text h2 { margin: 0; font-size: 17px; line-height: 22px; font-weight: 600; letter-spacing: -0.024em; }
+.alert-text p { margin: 4px 0 0; font-size: 13px; line-height: 18px; letter-spacing: -0.006em; }
+.alert-actions { display: grid; grid-template-columns: 1fr 1fr; border-top: 0.5px solid var(--separator); }
+.alert-actions button { min-height: 44px; font-size: 17px; color: var(--tint); }
+.alert-actions button + button { border-left: 0.5px solid var(--separator); }
+.alert-actions button:active { background: var(--fill-strong); }
+.alert-actions button:focus-visible { outline-offset: -2px; }
+.alert-actions .destructive { color: var(--red); font-weight: 600; }
+
 /* ---------- forms ---------- */
 .form .group { margin-bottom: 20px; }
 .form .footnote { margin: -12px 16px 20px; }

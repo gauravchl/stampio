@@ -396,7 +396,20 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--tint); outl
 .headline-value .num { font-size: 34px; line-height: 41px; }
 .headline-value .unit { font-size: 17px; }
 .headline-range { font-size: 15px; line-height: 20px; color: var(--label-2); font-weight: 600; letter-spacing: -0.016em; }
-.chart-box { height: min(48dvh, 330px); margin-top: 12px; }
+.headline-row { display: flex; align-items: flex-start; gap: 8px; }
+.headline-row .headline { flex: 1; min-width: 0; }
+.pager { display: flex; gap: 6px; margin-top: 2px; }
+.pager button {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--fill); color: var(--tint);
+  transition: opacity 0.15s;
+}
+.pager button:disabled { color: var(--label-3); }
+.chart-box { position: relative; height: min(48dvh, 330px); margin-top: 12px; }
+/* Let the page scroll vertically while horizontal drags page the chart. */
+.chart-box.pannable { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.chart-overlay { position: absolute; inset: 0; pointer-events: none; }
 
 .legend-row { padding-top: 9px; padding-bottom: 9px; }
 .legend-row + .legend-row::before { left: 50px; }

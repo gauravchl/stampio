@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Chart as ChartJS, LineElement, PointElement, LinearScale, TimeScale, Tooltip,
   type ChartOptions,
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 import { Line } from 'react-chartjs-2';
-import { format, startOfDay, subDays } from 'date-fns';
+import { addDays, differenceInCalendarDays, format, startOfDay, subDays } from 'date-fns';
 import type { Store } from '../store';
 import Header from '../components/Header';
-import { CheckIcon } from '../components/Icons';
+import { CheckIcon, ChevronRight } from '../components/Icons';
 import { displayColor, useTheme, type Theme } from '../theme';
 import { fmtMinutes, fmtTime, hourLabel, minuteParts } from '../format';
 
@@ -29,6 +29,9 @@ const CHART_THEME: Record<Theme, { text: string; grid: string; surface: string; 
 };
 
 const SEL_KEY = 'timestamp-app:chart';
+const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const easeOut = (k: number) => 1 - (1 - k) ** 3;
+type View = { min: number; max: number };
 const minutesOfDay = (ts: number) => {
   const d = new Date(ts);
   return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
@@ -58,6 +61,11 @@ function loadSel(): { hidden: string[]; range: RangeId } {
 export default function Chart({ store }: { store: Store }) {
   const { activities, entries } = store.data;
   const [sel, setSel] = useState(loadSel);
+  const [page, setPage] = useState(0);
+  const [panning, setPanning] = useState(false);
+  const chartRef = useRef<ChartJS<'line'>>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const live = useRef<View | null>(null);
   const { theme } = useTheme();
   const t = CHART_THEME[theme];
   useEffect(() => {
@@ -67,30 +75,43 @@ export default function Chart({ store }: { store: Store }) {
   const hidden = new Set(sel.hidden);
   const range = RANGES.find((r) => r.id === sel.range)!;
   const days = range.days;
+  const pageable = days !== Infinity;
   const todayStart = startOfDay(new Date()).getTime();
+  const todayEnd = addDays(todayStart, 1).getTime();
   const firstTs = entries.reduce((m, e) => Math.min(m, e.ts), Infinity);
-  const since = days === Infinity
-    ? (Number.isFinite(firstTs) ? startOfDay(firstTs).getTime() : todayStart)
-    : startOfDay(subDays(new Date(), days - 1)).getTime();
+  const firstStart = Number.isFinite(firstTs) ? startOfDay(firstTs).getTime() : todayStart;
+
+  // Fixed-length ranges page back in time: page 0 ends today, page 1 is the window before it, and so on.
+  const maxPage = pageable ? Math.max(0, Math.ceil(differenceInCalendarDays(todayEnd, firstStart) / days) - 1) : 0;
+  const pg = Math.min(page, maxPage);
+  const windowOf = (p: number): View => {
+    if (!pageable) return { min: firstStart, max: todayEnd };
+    const max = addDays(todayStart, 1 - p * days).getTime();
+    return { min: subDays(max, days).getTime(), max };
+  };
+  const { min: since, max: until } = windowOf(pg);
 
   const all = activities.map((a) => {
-    const pts = entries.filter((e) => e.activityId === a.id && e.ts >= since).sort((p, q) => p.ts - q.ts);
+    const allPts = entries.filter((e) => e.activityId === a.id).sort((p, q) => p.ts - q.ts);
+    const pts = allPts.filter((e) => e.ts >= since && e.ts < until);
     const mins = pts.map((e) => minutesOfDay(e.ts));
-    return { activity: a, pts, mins, color: displayColor(a.color, theme) };
+    return { activity: a, allPts, pts, mins, color: displayColor(a.color, theme) };
   });
   const series = all.filter((s) => !hidden.has(s.activity.id));
   const total = series.reduce((n, s) => n + s.pts.length, 0);
+  const everTotal = series.reduce((n, s) => n + s.allPts.length, 0);
 
   // Headline above the chart, like Health: one activity shows its average time, several show a count.
   const single = series.length === 1 && series[0].mins.length ? series[0] : null;
   const avg = single ? minuteParts(meanTime(single.mins)) : null;
-  const sameYear = new Date(since).getFullYear() === new Date().getFullYear();
-  const rangeLabel = `${format(since, sameYear ? 'MMM d' : 'MMM d, yyyy')} – ${format(new Date(), 'MMM d, yyyy')}`;
+  const last = pg === 0 ? Date.now() : until - 1;
+  const sameYear = new Date(since).getFullYear() === new Date(last).getFullYear();
+  const rangeLabel = `${format(since, sameYear ? 'MMM d' : 'MMM d, yyyy')} – ${format(last, 'MMM d, yyyy')}`;
 
   const chartData = {
-    datasets: series.map(({ activity: a, pts, color }) => ({
+    datasets: series.map(({ activity: a, allPts, color }) => ({
       label: a.name,
-      data: pts.map((e) => ({ x: startOfDay(e.ts).getTime() + 12 * 3600_000, y: minutesOfDay(e.ts), ts: e.ts })),
+      data: allPts.map((e) => ({ x: startOfDay(e.ts).getTime() + 12 * 3600_000, y: minutesOfDay(e.ts), ts: e.ts })),
       borderColor: color,
       backgroundColor: color,
       borderWidth: 2,
@@ -106,7 +127,7 @@ export default function Chart({ store }: { store: Store }) {
   const options: ChartOptions<'line'> = {
     responsive: true,
     maintainAspectRatio: false,
-    animation: matchMedia('(prefers-reduced-motion: reduce)').matches ? false : { duration: 250 },
+    animation: reducedMotion() ? false : { duration: 250 },
     layout: { padding: { top: 6, left: 2 } },
     interaction: { mode: 'nearest', intersect: false },
     plugins: {
@@ -137,8 +158,9 @@ export default function Chart({ store }: { store: Store }) {
           unit: days <= 7 ? 'day' : days <= 30 ? 'week' : 'month',
           displayFormats: { day: 'EEEEE', week: 'MMM d', month: 'MMM' },
         },
-        min: since,
-        max: todayStart + 86_400_000,
+        // Mid-swipe the chart is driven imperatively; keep a re-render from snapping it back.
+        min: live.current?.min ?? since,
+        max: live.current?.max ?? until,
         grid: { color: t.grid, drawTicks: false },
         border: { display: false, dash: [2, 3] },
         ticks: { color: t.text, font: { size: 11, weight: 500 }, maxRotation: 0, autoSkipPadding: 16, padding: 8, align: 'start' },
@@ -153,6 +175,156 @@ export default function Chart({ store }: { store: Store }) {
         border: { display: false },
       },
     },
+  };
+
+  // ---- Horizontal paging: drag, trackpad swipe or the chevrons move between windows. ----
+  const drag = useRef<{ x0: number; base: number; dx: number; t: number; v: number; id?: number } | null>(null);
+  const pending = useRef<{ x: number; y: number; id: number } | null>(null);
+  const raf = useRef(0);
+  const wheelTimer = useRef(0);
+  const ctl = useRef({ pg, maxPage, pageable, windowOf });
+  ctl.current = { pg, maxPage, pageable, windowOf };
+
+  const setView = (v: View) => {
+    const chart = chartRef.current;
+    live.current = v;
+    if (!chart) return;
+    const x = chart.options.scales!.x!;
+    x.min = v.min;
+    x.max = v.max;
+    chart.update('none');
+  };
+
+  // Hide the tooltip while panning, since it would point at a day that has scrolled away.
+  const setHover = (chart: ChartJS<'line'>, on: boolean) => {
+    chart.options.events = on ? ChartJS.defaults.events : [];
+    chart.options.plugins!.tooltip!.enabled = on;
+    chart.stop(); // a half-finished tooltip fade would otherwise freeze on screen
+    chart.setActiveElements([]);
+    chart.tooltip?.setActiveElements([], { x: 0, y: 0 });
+  };
+
+  const settle = (target: number) => {
+    const { windowOf } = ctl.current;
+    const to = windowOf(target);
+    const from = live.current ?? to;
+    cancelAnimationFrame(raf.current);
+    const done = () => {
+      live.current = null;
+      if (chartRef.current) {
+        setHover(chartRef.current, true);
+        chartRef.current.update();
+      }
+      setPage(target);
+      setPanning(false);
+    };
+    if (reducedMotion() || (from.min === to.min && from.max === to.max)) {
+      setView(to);
+      return done();
+    }
+    const t0 = performance.now();
+    const step = (now: number) => {
+      const k = easeOut(Math.min(1, (now - t0) / 280));
+      setView({ min: from.min + (to.min - from.min) * k, max: from.max + (to.max - from.max) * k });
+      if (k < 1) raf.current = requestAnimationFrame(step);
+      else done();
+    };
+    raf.current = requestAnimationFrame(step);
+  };
+
+  const beginPan = (x0: number, id?: number) => {
+    const chart = chartRef.current;
+    cancelAnimationFrame(raf.current);
+    const { pg, windowOf } = ctl.current;
+    const base = live.current?.min ?? windowOf(pg).min;
+    drag.current = { x0, base, dx: 0, t: performance.now(), v: 0, id };
+    if (chart) setHover(chart, false);
+    setPanning(true);
+  };
+
+  const movePan = (dx: number) => {
+    const d = drag.current, chart = chartRef.current;
+    if (!d || !chart) return;
+    const now = performance.now();
+    d.v = 0.8 * ((dx - d.dx) / Math.max(1, now - d.t)) + 0.2 * d.v;
+    d.dx = dx;
+    d.t = now;
+    const { maxPage, windowOf } = ctl.current;
+    const span = windowOf(0).max - windowOf(0).min;
+    const lo = windowOf(maxPage).min, hi = windowOf(0).min;
+    let min = d.base - (dx * span) / chart.chartArea.width;
+    // Rubber-band past the first and last page.
+    if (min > hi) min = hi + (min - hi) / 3;
+    if (min < lo) min = lo - (lo - min) / 3;
+    setView({ min, max: min + span });
+  };
+
+  const endPan = () => {
+    const d = drag.current;
+    drag.current = null;
+    if (!d) return;
+    const { pg, maxPage, windowOf } = ctl.current;
+    const cur = windowOf(pg);
+    // Pages travelled, positive = back in time. A quick flick counts as at least one page.
+    let by = Math.round((cur.min - (live.current?.min ?? cur.min)) / (cur.max - cur.min));
+    if (by === 0 && Math.abs(d.v) > 0.35 && Math.abs(d.dx) > 12) by = Math.sign(d.v);
+    settle(Math.max(0, Math.min(maxPage, pg + by)));
+  };
+
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    // Trackpad two-finger swipe. Needs a non-passive listener so the browser doesn't navigate back.
+    const onWheel = (e: WheelEvent) => {
+      if (!ctl.current.pageable || Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+      e.preventDefault();
+      if (!drag.current) beginPan(0);
+      movePan(drag.current!.dx - e.deltaX);
+      clearTimeout(wheelTimer.current);
+      wheelTimer.current = window.setTimeout(() => {
+        if (drag.current) drag.current.v = 0;
+        endPan();
+      }, 120);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  });
+  useEffect(() => () => {
+    cancelAnimationFrame(raf.current);
+    clearTimeout(wheelTimer.current);
+  }, []);
+
+  const pointer = {
+    onPointerDown: (e: React.PointerEvent) => {
+      if (!pageable || e.button !== 0) return;
+      drag.current = null;
+      pending.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+    },
+    onPointerMove: (e: React.PointerEvent) => {
+      const p = pending.current;
+      if (p && p.id === e.pointerId) {
+        const dx = e.clientX - p.x;
+        if (Math.abs(dx) < 6 || Math.abs(dx) < Math.abs(e.clientY - p.y)) return;
+        pending.current = null;
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        beginPan(p.x, e.pointerId);
+      }
+      if (drag.current?.id === e.pointerId) movePan(e.clientX - drag.current.x0);
+    },
+    onPointerUp: (e: React.PointerEvent) => {
+      pending.current = null;
+      if (drag.current?.id === e.pointerId) endPan();
+    },
+    onPointerCancel: (e: React.PointerEvent) => {
+      pending.current = null;
+      if (drag.current?.id === e.pointerId) endPan();
+    },
+  };
+  const go = (p: number) => {
+    if (drag.current || p < 0 || p > maxPage) return;
+    live.current = live.current ?? windowOf(pg);
+    setPanning(true);
+    settle(p);
   };
 
   const toggle = (id: string) =>
@@ -170,7 +342,10 @@ export default function Chart({ store }: { store: Store }) {
           <button
             key={r.id} role="tab" aria-selected={sel.range === r.id} aria-label={r.name}
             className={sel.range === r.id ? 'on' : ''}
-            onClick={() => setSel((s) => ({ ...s, range: r.id }))}
+            onClick={() => {
+              setSel((s) => ({ ...s, range: r.id }));
+              setPage(0);
+            }}
           >
             {r.label}
           </button>
@@ -178,31 +353,51 @@ export default function Chart({ store }: { store: Store }) {
       </div>
 
       <div className="group chart-group">
-        <div className="headline">
-          <span className="eyebrow">{single ? `Average ${single.activity.name}` : 'Logged'}</span>
-          <span className="headline-value">
-            {avg ? (
-              <>
-                <span className="num">{avg.main}</span>
-                {avg.period && <span className="unit">{avg.period}</span>}
-              </>
-            ) : (
-              <>
-                <span className="num">{total}</span>
-                <span className="unit">{total === 1 ? 'time' : 'times'}</span>
-              </>
-            )}
-          </span>
-          <span className="headline-range">{rangeLabel}</span>
+        <div className="headline-row">
+          <div className="headline">
+            <span className="eyebrow">{single ? `Average ${single.activity.name}` : 'Logged'}</span>
+            <span className="headline-value">
+              {avg ? (
+                <>
+                  <span className="num">{avg.main}</span>
+                  {avg.period && <span className="unit">{avg.period}</span>}
+                </>
+              ) : (
+                <>
+                  <span className="num">{total}</span>
+                  <span className="unit">{total === 1 ? 'time' : 'times'}</span>
+                </>
+              )}
+            </span>
+            <span className="headline-range">{rangeLabel}</span>
+          </div>
+          {pageable && maxPage > 0 && (
+            <div className="pager">
+              <button aria-label={`Previous ${range.name}`} disabled={pg >= maxPage} onClick={() => go(pg + 1)}>
+                <ChevronRight width={17} height={17} style={{ transform: 'scaleX(-1)' }} />
+              </button>
+              <button aria-label={`Next ${range.name}`} disabled={pg === 0} onClick={() => go(pg - 1)}>
+                <ChevronRight width={17} height={17} />
+              </button>
+            </div>
+          )}
         </div>
-        <div className="chart-box">
-          {total === 0 ? (
+        <div className={`chart-box ${pageable ? 'pannable' : ''}`} ref={boxRef} {...pointer}>
+          {everTotal === 0 ? (
             <div className="empty">
               <b>No Data</b>
               <span>{series.length === 0 ? 'Choose an activity below to see it here.' : `Nothing logged in this ${range.name === 'all time' ? 'range' : range.name}.`}</span>
             </div>
           ) : (
-            <Line data={chartData} options={options} />
+            <>
+              <Line ref={chartRef} data={chartData} options={options} />
+              {total === 0 && !panning && (
+                <div className="empty chart-overlay">
+                  <b>No Data</b>
+                  <span>Nothing logged in this {range.name}.</span>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

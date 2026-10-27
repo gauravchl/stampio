@@ -128,25 +128,42 @@ export function useStore() {
 
 export type Store = ReturnType<typeof useStore>;
 
-/** Merge imported rows, creating activities by name and skipping exact duplicates. */
-export function mergeRows(d: Data, rows: { name: string; ts: number }[]) {
+/**
+ * Merge an import: create missing activities by name (taking emoji and color from the
+ * file), put the file's activities first in its order, and skip exact duplicate entries.
+ */
+export function mergeRows(
+  d: Data,
+  { activities: defs, rows }: { activities: { name: string; emoji?: string; color?: string }[]; rows: { name: string; ts: number }[] },
+) {
   const activities = [...d.activities];
   const entries = [...d.entries];
   const byName = new Map(activities.map((a) => [a.name.toLowerCase(), a]));
   const seen = new Set(entries.map((e) => `${e.activityId}|${e.ts}`));
-  let added = 0;
-  for (const r of rows) {
-    let a = byName.get(r.name.toLowerCase());
+  const order: string[] = [];
+  let added = 0, created = 0;
+  for (const def of defs) {
+    let a = byName.get(def.name.toLowerCase());
     if (!a) {
-      a = { id: uid(), name: r.name, emoji: '⏱️', color: nextColor(activities), createdAt: Date.now() };
+      a = {
+        id: uid(), name: def.name, emoji: def.emoji || '⏱️',
+        color: def.color || nextColor(activities), createdAt: Date.now(),
+      };
       activities.push(a);
-      byName.set(r.name.toLowerCase(), a);
+      byName.set(def.name.toLowerCase(), a);
+      created++;
     }
+    order.push(a.id);
+  }
+  for (const r of rows) {
+    const a = byName.get(r.name.toLowerCase())!;
     const key = `${a.id}|${r.ts}`;
     if (seen.has(key)) continue;
     seen.add(key);
     entries.push({ id: uid(), activityId: a.id, ts: r.ts });
     added++;
   }
-  return { data: { activities, entries }, added };
+  const rank = new Map(order.map((id, i) => [id, i]));
+  activities.sort((a, b) => (rank.get(a.id) ?? Infinity) - (rank.get(b.id) ?? Infinity));
+  return { data: { activities, entries }, added, created };
 }

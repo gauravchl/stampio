@@ -50,8 +50,10 @@ To try it on your phone, open the LAN address that `pnpm dev` prints while on th
 ## CSV format
 
 ```
-activity,timestamp,date,time,weekday
-Lunch,2026-10-26T12:41:07+01:00,2026-10-26,12:41:07,Mon
+activity,timestamp,date,time,weekday,emoji,color
+Lunch,,,,,🍽️,#d95926
+Nap,,,,,😴,#d55181
+Lunch,2026-10-26T12:41:07+01:00,2026-10-26,12:41:07,Mon,🍽️,#d95926
 ```
 
-Import only needs the `activity` and `timestamp` columns.
+The first rows (blank timestamp) list every activity in home-screen order, so activities with nothing logged yet, plus their emoji and color, are kept. Import only needs the `activity` and `timestamp` columns; it adds missing activities and moves the file's activities to the front in the file's order.

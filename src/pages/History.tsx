@@ -38,10 +38,11 @@ export default function History({ store }: { store: Store }) {
 
   const onImport = async (file: File) => {
     try {
-      const rows = fromCsv(await file.text());
-      const { data: next, added } = mergeRows(data, rows);
+      const parsed = fromCsv(await file.text());
+      const { data: next, added, created } = mergeRows(data, parsed);
       replaceData(next);
-      alert(`Imported ${added} new entr${added === 1 ? 'y' : 'ies'}. ${rows.length - added} were already here.`);
+      const acts = created ? ` Added ${created} activit${created === 1 ? 'y' : 'ies'}.` : '';
+      alert(`Imported ${added} new entr${added === 1 ? 'y' : 'ies'}. ${parsed.rows.length - added} were already here.${acts}`);
     } catch (err) {
       alert(`Couldn’t import that file. ${(err as Error).message}`);
     }
@@ -112,7 +113,7 @@ export default function History({ store }: { store: Store }) {
 
       <h3 className="list-header">Data</h3>
       <div className="group list">
-        <button className="row tint" onClick={() => saveCsv(toCsv(data))} disabled={!data.entries.length}>
+        <button className="row tint" onClick={() => saveCsv(toCsv(data))} disabled={!data.activities.length}>
           <ShareIcon width={19} height={19} /> Export as CSV
         </button>
         <button className="row tint" onClick={() => fileRef.current?.click()}>

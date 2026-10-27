@@ -1,6 +1,5 @@
-// Dev-only console helpers for filling the app with realistic sample data.
-// Loaded only when running `npm run dev` (console helpers and the Developer section
-// on the History tab); not included in production builds.
+// Helpers for filling the app with realistic sample data. Used by the Developer section
+// on the History tab, and installed as console helpers when running `npm run dev`.
 import { COLORS, uid, type Activity, type Data, type Entry } from '../store';
 
 type Profile = { hour: number; sd: number; chance: number; weekendShift?: number };

@@ -362,6 +362,7 @@ a.row:focus-visible { outline: 2px solid var(--tint); outline-offset: -2px; }
 .alert-actions button:active { background: var(--fill-strong); }
 .alert-actions button:focus-visible { outline-offset: -2px; }
 .alert-actions .destructive { color: var(--red); font-weight: 600; }
+.alert-actions .default { font-weight: 600; }
 
 /* ---------- forms ---------- */
 .form .group { margin-bottom: 20px; }

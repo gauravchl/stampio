@@ -23,6 +23,7 @@ export default function History({ store }: { store: Store }) {
   const [editing, setEditing] = useState<Entry | null>(null);
   const [adding, setAdding] = useState(false);
   const [confirmingDeleteAll, setConfirmingDeleteAll] = useState(false);
+  const [confirmingTestData, setConfirmingTestData] = useState<'seed' | 'clear' | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const byId = useMemo(() => new Map(data.activities.map((a) => [a.id, a])), [data.activities]);
@@ -57,13 +58,17 @@ export default function History({ store }: { store: Store }) {
   };
   const nActs = data.activities.length, nEntries = data.entries.length;
 
-  // Dev builds only; Vite drops these branches (and the dev/seed chunk) from production.
+  // Loaded on demand so the sample-data code stays out of the main bundle.
   const seedTestData = async () => {
     const { seedTestData } = await import('../dev/seed');
+    setConfirmingTestData(null);
     await seedTestData(replaceData);
     setFilter('all');
   };
-  const clearTestData = async () => (await import('../dev/seed')).clearTestData(replaceData);
+  const clearTestData = async () => {
+    setConfirmingTestData(null);
+    (await import('../dev/seed')).clearTestData(replaceData);
+  };
   const nSeeded = data.entries.filter((e) => e.id.startsWith('seed-')).length;
 
   const filterName = filter === 'all' ? 'All Activities' : byId.get(filter)?.name ?? 'All Activities';
@@ -147,18 +152,14 @@ export default function History({ store }: { store: Store }) {
         {data.entries.length} {data.entries.length === 1 ? 'entry' : 'entries'} stored on this device. Export now and then to keep a backup.
       </p>
 
-      {import.meta.env.DEV && (
-        <>
-          <h3 className="list-header">Developer</h3>
-          <div className="group list">
-            <button className="row tint" onClick={seedTestData}>Seed Test Data</button>
-            <button className="row destructive" onClick={clearTestData} disabled={!nSeeded}>Clear Test Data</button>
-          </div>
-          <p className="footnote">
-            Seeding replaces sample data with 30 days of new samples for every activity, and adds sample activities if there are none. Clearing keeps anything you logged yourself. Only shown in dev builds.
-          </p>
-        </>
-      )}
+      <h3 className="list-header">Developer</h3>
+      <div className="group list">
+        <button className="row tint" onClick={() => setConfirmingTestData('seed')}>Seed Test Data</button>
+        <button className="row destructive" onClick={() => setConfirmingTestData('clear')} disabled={!nSeeded}>Clear Test Data</button>
+      </div>
+      <p className="footnote">
+        Seeding replaces sample data with 30 days of new samples for every activity, and adds sample activities if there are none. Clearing keeps anything you logged yourself.
+      </p>
 
       <h3 className="list-header">About</h3>
       <div className="group list">
@@ -207,6 +208,25 @@ export default function History({ store }: { store: Store }) {
             onSave={(activityId, ts) => { logEntry(activityId!, ts); setAdding(false); }}
           />
         </Sheet>
+      )}
+      {confirmingTestData === 'seed' && (
+        <ConfirmDialog
+          title="Seed Test Data?"
+          message={`This adds 30 days of sample times${nActs ? ` to your ${nActs} activit${nActs === 1 ? 'y' : 'ies'}` : ' and a few sample activities'}, mixed in with your own logs. Your own logs aren’t changed, and Clear Test Data removes the samples later.`}
+          confirmLabel="Seed"
+          destructive={false}
+          onConfirm={seedTestData}
+          onCancel={() => setConfirmingTestData(null)}
+        />
+      )}
+      {confirmingTestData === 'clear' && (
+        <ConfirmDialog
+          title="Clear Test Data?"
+          message={`This removes ${nSeeded} sample time${nSeeded === 1 ? '' : 's'}. Anything you logged yourself is kept.`}
+          confirmLabel="Clear"
+          onConfirm={clearTestData}
+          onCancel={() => setConfirmingTestData(null)}
+        />
       )}
       {confirmingDeleteAll && (
         <ConfirmDialog

@@ -1,10 +1,11 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 
 /** iOS-style alert: title, message, and Cancel / destructive action side by side. */
-export default function ConfirmDialog({ title, message, confirmLabel = 'Delete', onConfirm, onCancel }: {
+export default function ConfirmDialog({ title, message, confirmLabel = 'Delete', destructive = true, onConfirm, onCancel }: {
   title: string;
   message?: ReactNode;
   confirmLabel?: string;
+  destructive?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -40,7 +41,7 @@ export default function ConfirmDialog({ title, message, confirmLabel = 'Delete',
         </div>
         <div className="alert-actions">
           <button ref={cancelRef} onClick={onCancel}>Cancel</button>
-          <button className="destructive" onClick={onConfirm}>{confirmLabel}</button>
+          <button className={destructive ? 'destructive' : 'default'} onClick={onConfirm}>{confirmLabel}</button>
         </div>
       </div>
     </div>

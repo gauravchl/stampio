@@ -6,7 +6,7 @@ import ActivityForm, { ACTIVITY_FORM_ID } from '../components/ActivityForm';
 import Header from '../components/Header';
 import { PlusIcon } from '../components/Icons';
 import { displayColor, useTheme } from '../theme';
-import { fmtTime, relativeDay, timeParts } from '../format';
+import { fmtTime, relativeDay } from '../format';
 import { haptic } from '../haptics';
 
 type SheetState = { mode: 'new' } | { mode: 'edit'; activity: Activity } | null;
@@ -61,8 +61,7 @@ export default function Track({ store }: { store: Store }) {
   return (
     <>
       <Header
-        title="Today"
-        sub={format(new Date(), 'EEEE, MMMM d')}
+        title={format(new Date(), 'EEEE, MMM d')}
         actions={
           data.activities.length > 0 && (
             <button className="nav-btn" onClick={() => setEditing((v) => !v)}>
@@ -72,21 +71,16 @@ export default function Track({ store }: { store: Store }) {
         }
       />
 
-      <div className="section-head">
-        <h2>Activities</h2>
-        <span className="section-note">{editing ? 'Tap one to edit' : 'Tap to log the time'}</span>
-      </div>
-
       <div className="grid">
         {data.activities.map((a) => {
           const s = stats.get(a.id);
-          const t = s?.last ? timeParts(s.last) : null;
+          // One short line: today's time, otherwise just the day it was last logged.
           const caption = editing
             ? 'Edit'
             : !s?.last
               ? 'No logs yet'
-              : s.today > 1
-                ? `Today · ${s.today} times`
+              : isToday(s.last)
+                ? fmtTime(s.last)
                 : relativeDay(s.last);
           return (
             <button
@@ -98,19 +92,16 @@ export default function Track({ store }: { store: Store }) {
             >
               <span className="tile-head">
                 <span className="glyph">{a.emoji}</span>
-                <span className="tile-name">{a.name}</span>
-              </span>
-              <span className="tile-value">
-                {t ? (
-                  <>
-                    <span className="num">{t.main}</span>
-                    {t.period && <span className="unit">{t.period}</span>}
-                  </>
-                ) : (
-                  <span className="num placeholder">––</span>
+                {!editing && s && s.today > 1 && (
+                  <span className="tile-count" aria-hidden>{s.today}×</span>
                 )}
               </span>
-              <span className={`tile-caption ${editing ? 'tint' : ''}`}>{caption}</span>
+              <span className="tile-name">{a.name}</span>
+              <span
+                className={`tile-caption ${editing ? 'tint' : s?.last && isToday(s.last) ? 'today' : ''}`}
+              >
+                {caption}
+              </span>
             </button>
           );
         })}

@@ -1,35 +1,30 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useTheme } from '../theme';
 import { MoonIcon, SunIcon } from './Icons';
 
 /**
- * iOS-style navigation bar: a large title that scrolls away, after which a
- * compact centered title fades in over a translucent bar.
+ * Compact iOS-style navigation bar: a left-aligned title with actions on the
+ * right. It turns translucent once the page scrolls under it.
  */
-export default function Header({ title, sub, actions }: {
-  title: string;
-  sub?: ReactNode;
+export default function Header({ title, actions }: {
+  title: ReactNode;
   actions?: ReactNode;
 }) {
   const { theme, toggle } = useTheme();
-  const titleRef = useRef<HTMLHeadingElement>(null);
-  const [compact, setCompact] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const el = titleRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver(([e]) => setCompact(!e.isIntersecting), {
-      rootMargin: '-52px 0px 0px 0px',
-    });
-    io.observe(el);
-    return () => io.disconnect();
+    const onScroll = () => setScrolled(window.scrollY > 0);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   return (
     <>
-      <div className={`navbar ${compact ? 'compact' : ''}`}>
+      <div className={`navbar ${scrolled ? 'compact' : ''}`}>
         <div className="navbar-inner">
-          <span className="navbar-title">{title}</span>
+          <h1 className="navbar-title">{title}</h1>
           <div className="navbar-actions">
             {actions}
             <button
@@ -41,10 +36,7 @@ export default function Header({ title, sub, actions }: {
           </div>
         </div>
       </div>
-      <div className="large-title">
-        {sub && <p className="eyebrow">{sub}</p>}
-        <h1 ref={titleRef}>{title}</h1>
-      </div>
+      <div className="navbar-gap" />
     </>
   );
 }

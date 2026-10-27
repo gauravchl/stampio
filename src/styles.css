@@ -87,7 +87,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--tint); outl
 .grow { flex: 1; min-width: 0; }
 .tint { color: var(--tint); }
 
-/* ---------- navigation bar + large title ---------- */
+/* ---------- navigation bar ---------- */
 .navbar {
   position: sticky; top: 0; z-index: 15;
   margin: 0 calc(-1 * var(--gutter));
@@ -100,13 +100,13 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--tint); outl
   backdrop-filter: saturate(180%) blur(20px);
   box-shadow: 0 0.5px 0 var(--separator);
 }
-.navbar-inner { position: relative; height: 44px; display: flex; align-items: center; justify-content: flex-end; }
+.navbar-inner { height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .navbar-title {
-  position: absolute; left: 50%; transform: translateX(-50%);
-  font-weight: 600; opacity: 0; transition: opacity 0.2s;
-  pointer-events: none;
+  margin: 0; min-width: 0;
+  font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: -0.012em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.navbar.compact .navbar-title { opacity: 1; }
+.navbar-gap { height: 12px; }
 .navbar-actions { display: flex; align-items: center; gap: 14px; }
 
 .nav-btn { color: var(--tint); font-size: 17px; padding: 8px 0; }
@@ -120,10 +120,6 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--tint); outl
 }
 .circle-btn:active { opacity: 0.5; }
 
-.large-title { padding: 2px 0 14px; }
-.large-title h1 {
-  margin: 0; font-size: 34px; line-height: 41px; font-weight: 700; letter-spacing: 0.012em;
-}
 .eyebrow {
   display: block; margin: 0;
   font-size: 13px; line-height: 18px; font-weight: 600;
@@ -194,29 +190,35 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--tint); outl
 .picker-row select { position: absolute; inset: 0; opacity: 0; width: 100%; font-size: 16px; cursor: pointer; }
 
 /* ---------- Today: activity tiles ---------- */
-.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 22px; }
-@media (min-width: 560px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* Compact 3-up tiles so 15 activities fit on one iPhone screen without scrolling. */
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 22px; }
+@media (min-width: 560px) { .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
 .tile {
   --c: var(--tint);
   position: relative;
   display: flex; flex-direction: column; align-items: stretch;
-  min-height: 120px;
-  padding: 12px 14px 13px;
+  min-width: 0;
+  padding: 9px 10px 8px;
   border-radius: 14px;
   background: var(--card);
   text-align: left;
   user-select: none; -webkit-user-select: none;
   transition: transform 0.25s var(--ease-spring), background-color 0.15s;
 }
-.tile:active { transform: scale(0.965); background: var(--pressed); transition-duration: 0.1s; }
-.tile-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.tile-head .glyph { width: 28px; height: 28px; border-radius: 7px; font-size: 16px; }
+.tile:active { transform: scale(0.95); background: var(--pressed); transition-duration: 0.1s; }
+.tile-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; }
+.tile-head .glyph { width: 30px; height: 30px; border-radius: 8px; font-size: 17px; }
+.tile-count {
+  font-family: var(--rounded); font-size: 12px; line-height: 16px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 1px 6px; border-radius: 99px;
+  color: var(--c); background: color-mix(in srgb, var(--c) 16%, transparent);
+}
 .tile-name {
   font-size: 15px; line-height: 20px; font-weight: 600; letter-spacing: -0.016em;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.tile-value { margin-top: auto; padding-top: 14px; display: flex; align-items: baseline; gap: 3px; }
 .num {
   font-family: var(--rounded);
   font-size: 30px; line-height: 34px; font-weight: 700; letter-spacing: 0;
@@ -224,7 +226,12 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--tint); outl
 }
 .num.placeholder { color: var(--label-3); }
 .unit { font-family: var(--rounded); font-size: 15px; font-weight: 600; color: var(--label-2); letter-spacing: 0; }
-.tile-caption { font-size: 13px; line-height: 18px; color: var(--label-2); letter-spacing: -0.006em; }
+.tile-caption {
+  font-size: 13px; line-height: 18px; color: var(--label-2); letter-spacing: -0.006em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tile-caption.today { color: var(--label); font-weight: 500; }
 .tile-caption.tint { color: var(--tint); font-weight: 500; }
 
 .tile.pulse { animation: tile-pulse 0.6s var(--ease-spring); }

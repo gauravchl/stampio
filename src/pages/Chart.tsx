@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Chart as ChartJS, LineElement, PointElement, LinearScale, TimeScale, Tooltip,
-  type ChartOptions,
+  type ChartOptions, type Plugin,
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 import { Line } from 'react-chartjs-2';
@@ -26,6 +26,34 @@ type RangeId = (typeof RANGES)[number]['id'];
 const CHART_THEME: Record<Theme, { text: string; grid: string; surface: string; tipBg: string; tipBorder: string; tipText: string; tipSub: string }> = {
   light: { text: 'rgba(60,60,67,0.6)', grid: 'rgba(60,60,67,0.12)', surface: '#ffffff', tipBg: '#ffffff', tipBorder: 'rgba(60,60,67,0.18)', tipText: '#000000', tipSub: 'rgba(60,60,67,0.6)' },
   dark: { text: 'rgba(235,235,245,0.6)', grid: 'rgba(235,235,245,0.14)', surface: '#1c1c1e', tipBg: '#2c2c2e', tipBorder: 'rgba(84,84,88,0.65)', tipText: '#ffffff', tipSub: 'rgba(235,235,245,0.6)' },
+};
+
+const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+
+/** Draws each point as its activity's emoji. Drawn as text so it stays crisp at any pixel ratio. */
+const emojiPoints: Plugin<'line'> = {
+  id: 'emojiPoints',
+  afterDatasetsDraw(chart) {
+    const { ctx, chartArea: area } = chart;
+    const active = new Set(chart.getActiveElements().map((e) => `${e.datasetIndex}:${e.index}`));
+    ctx.save();
+    // Clip only the sides so panned-away points vanish but midnight/late-night emoji aren't cut off.
+    ctx.beginPath();
+    ctx.rect(area.left, 0, area.width, chart.height);
+    ctx.clip();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    chart.data.datasets.forEach((ds, i) => {
+      const { emoji, emojiSize } = ds as { emoji?: string; emojiSize?: number };
+      if (!emoji || !emojiSize || !chart.isDatasetVisible(i)) return;
+      chart.getDatasetMeta(i).data.forEach((pt, j) => {
+        if ((pt as { skip?: boolean }).skip) return;
+        ctx.font = `${active.has(`${i}:${j}`) ? emojiSize * 1.5 : emojiSize}px ${EMOJI_FONT}`;
+        ctx.fillText(emoji, pt.x, pt.y);
+      });
+    });
+    ctx.restore();
+  },
 };
 
 const SEL_KEY = 'timestamp-app:chart';
@@ -111,14 +139,15 @@ export default function Chart({ store }: { store: Store }) {
   const chartData = {
     datasets: series.map(({ activity: a, allPts, color }) => ({
       label: a.name,
+      emoji: a.emoji,
+      emojiSize: days <= 7 ? 16 : days <= 30 ? 11 : 9,
       data: allPts.map((e) => ({ x: startOfDay(e.ts).getTime() + 12 * 3600_000, y: minutesOfDay(e.ts), ts: e.ts })),
       borderColor: color,
       backgroundColor: color,
       borderWidth: 2,
-      pointRadius: days <= 30 ? 3.5 : 2.5,
-      pointHoverRadius: 6,
-      pointBorderColor: t.surface,
-      pointBorderWidth: 1.5,
+      // Points are drawn as emoji by the emojiPoints plugin; these stay invisible but hoverable.
+      pointRadius: 0,
+      pointHoverRadius: 0,
       pointHitRadius: 14,
       tension: 0.2,
     })),
@@ -143,11 +172,10 @@ export default function Chart({ store }: { store: Store }) {
         padding: { x: 12, y: 9 },
         cornerRadius: 12,
         caretSize: 0,
-        boxPadding: 5,
-        usePointStyle: true,
+        displayColors: false,
         callbacks: {
           title: (items) => format((items[0].raw as { ts: number }).ts, 'EEE, MMM d').toUpperCase(),
-          label: (item) => `${item.dataset.label}  ${fmtTime((item.raw as { ts: number }).ts)}`,
+          label: (item) => `${(item.dataset as { emoji?: string }).emoji} ${item.dataset.label}  ${fmtTime((item.raw as { ts: number }).ts)}`,
         },
       },
     },
@@ -390,7 +418,7 @@ export default function Chart({ store }: { store: Store }) {
             </div>
           ) : (
             <>
-              <Line ref={chartRef} data={chartData} options={options} />
+              <Line ref={chartRef} data={chartData} options={options} plugins={[emojiPoints]} />
               {total === 0 && !panning && (
                 <div className="empty chart-overlay">
                   <b>No Data</b>

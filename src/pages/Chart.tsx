@@ -136,18 +136,22 @@ export default function Chart({ store }: { store: Store }) {
   const sameYear = new Date(since).getFullYear() === new Date(last).getFullYear();
   const rangeLabel = `${format(since, sameYear ? 'MMM d' : 'MMM d, yyyy')} – ${format(last, 'MMM d, yyyy')}`;
 
+  // The week view has room for each point's emoji; longer ranges get too crowded, so they use dots.
+  const showEmoji = days <= 7;
   const chartData = {
     datasets: series.map(({ activity: a, allPts, color }) => ({
       label: a.name,
       emoji: a.emoji,
-      emojiSize: days <= 7 ? 16 : days <= 30 ? 11 : 9,
+      emojiSize: showEmoji ? 13 : 0,
       data: allPts.map((e) => ({ x: startOfDay(e.ts).getTime() + 12 * 3600_000, y: minutesOfDay(e.ts), ts: e.ts })),
       borderColor: color,
       backgroundColor: color,
       borderWidth: 2,
-      // Points are drawn as emoji by the emojiPoints plugin; these stay invisible but hoverable.
-      pointRadius: 0,
-      pointHoverRadius: 0,
+      // In emoji mode the emojiPoints plugin draws the points; these stay invisible but hoverable.
+      pointRadius: showEmoji ? 0 : days <= 30 ? 3.5 : 2.5,
+      pointHoverRadius: showEmoji ? 0 : 6,
+      pointBorderColor: t.surface,
+      pointBorderWidth: 1.5,
       pointHitRadius: 14,
       tension: 0.2,
     })),

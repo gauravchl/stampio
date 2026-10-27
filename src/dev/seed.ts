@@ -1,6 +1,6 @@
 // Dev-only console helpers for filling the app with realistic sample data.
 // Loaded from App only when running `npm run dev`; not included in production builds.
-import type { Data, Entry } from '../store';
+import { COLORS, uid, type Activity, type Data, type Entry } from '../store';
 
 type Profile = { hour: number; sd: number; chance: number; weekendShift?: number };
 
@@ -18,6 +18,22 @@ const PROFILES: [RegExp, Profile[]][] = [
 ];
 
 const SEED_PREFIX = 'seed-';
+
+// Used when there are no activities to seed; each matches a profile above.
+const SAMPLE_ACTIVITIES: [string, string][] = [
+  ['Woke up', '☀️'],
+  ['Coffee', '☕'],
+  ['Lunch', '🍽️'],
+  ['Workout', '🏋️'],
+  ['Bed', '🛏️'],
+];
+
+const sampleActivities = (): Activity[] => {
+  const now = Date.now();
+  return SAMPLE_ACTIVITIES.map(([name, emoji], i) => ({
+    id: uid(), name, emoji, color: COLORS[i], createdAt: now + i,
+  }));
+};
 
 const gauss = () => {
   let u = 0;
@@ -65,14 +81,18 @@ export function install(setData: (fn: (d: Data) => Data) => void) {
   const w = window as unknown as Record<string, unknown>;
   if (w.seedTestData) return; // StrictMode runs effects twice in dev
 
-  /** Replace any previous sample data with `days` days of it (before today) for every activity. */
+  /**
+   * Replace any previous sample data with `days` days of it (before today) for every activity.
+   * With no activities, adds a few sample ones first.
+   */
   w.seedTestData = (days = 30) => {
     // StrictMode calls updaters twice; cache so both calls return the same random data.
     let cache: { from: Data; to: Data } | undefined;
     let n = 0;
     setData((d) => {
       if (cache?.from === d) return cache.to;
-      const clean = withoutSeed(d);
+      let clean = withoutSeed(d);
+      if (!clean.activities.length) clean = { ...clean, activities: sampleActivities() };
       const seeded = generate(clean, days);
       n = seeded.length;
       cache = { from: d, to: { ...clean, entries: [...clean.entries, ...seeded] } };
@@ -89,7 +109,7 @@ export function install(setData: (fn: (d: Data) => Data) => void) {
   };
 
   console.info(
-    '%cStampio dev tools%c\n  seedTestData(days = 30)  add sample data for every activity\n  clearTestData()          remove sample data (keeps your own logs)',
+    '%cStampio dev tools%c\n  seedTestData(days = 30)  add sample data for every activity (adds sample activities if there are none)\n  clearTestData()          remove sample data (keeps your own logs)',
     'font-weight:bold', '',
   );
 }

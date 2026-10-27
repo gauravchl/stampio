@@ -57,6 +57,15 @@ export default function History({ store }: { store: Store }) {
   };
   const nActs = data.activities.length, nEntries = data.entries.length;
 
+  // Dev builds only; Vite drops these branches (and the dev/seed chunk) from production.
+  const seedTestData = async () => {
+    const { seedTestData } = await import('../dev/seed');
+    await seedTestData(replaceData);
+    setFilter('all');
+  };
+  const clearTestData = async () => (await import('../dev/seed')).clearTestData(replaceData);
+  const nSeeded = data.entries.filter((e) => e.id.startsWith('seed-')).length;
+
   const filterName = filter === 'all' ? 'All Activities' : byId.get(filter)?.name ?? 'All Activities';
 
   return (
@@ -137,6 +146,19 @@ export default function History({ store }: { store: Store }) {
       <p className="footnote">
         {data.entries.length} {data.entries.length === 1 ? 'entry' : 'entries'} stored on this device. Export now and then to keep a backup.
       </p>
+
+      {import.meta.env.DEV && (
+        <>
+          <h3 className="list-header">Developer</h3>
+          <div className="group list">
+            <button className="row tint" onClick={seedTestData}>Seed Test Data</button>
+            <button className="row destructive" onClick={clearTestData} disabled={!nSeeded}>Clear Test Data</button>
+          </div>
+          <p className="footnote">
+            Seeding replaces sample data with 30 days of new samples for every activity, and adds sample activities if there are none. Clearing keeps anything you logged yourself. Only shown in dev builds.
+          </p>
+        </>
+      )}
 
       <h3 className="list-header">About</h3>
       <div className="group list">

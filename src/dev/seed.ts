@@ -1,5 +1,6 @@
 // Dev-only console helpers for filling the app with realistic sample data.
-// Loaded from App only when running `npm run dev`; not included in production builds.
+// Loaded only when running `npm run dev` (console helpers and the Developer section
+// on the History tab); not included in production builds.
 import { COLORS, uid, type Activity, type Data, type Entry } from '../store';
 
 type Profile = { hour: number; sd: number; chance: number; weekendShift?: number };
@@ -77,34 +78,45 @@ function generate(d: Data, days: number): Entry[] {
 
 const withoutSeed = (d: Data): Data => ({ ...d, entries: d.entries.filter((e) => !e.id.startsWith(SEED_PREFIX)) });
 
-export function install(setData: (fn: (d: Data) => Data) => void) {
+type SetData = (fn: (d: Data) => Data) => void;
+
+/**
+ * Replace any previous sample data with `days` days of it (before today) for every activity.
+ * With no activities, adds a few sample ones first. Resolves with the number of timestamps added.
+ */
+export function seedTestData(setData: SetData, days = 30): Promise<number> {
+  // StrictMode calls updaters twice; cache so both calls return the same random data.
+  let cache: { from: Data; to: Data } | undefined;
+  let n = 0;
+  setData((d) => {
+    if (cache?.from === d) return cache.to;
+    let clean = withoutSeed(d);
+    if (!clean.activities.length) clean = { ...clean, activities: sampleActivities() };
+    const seeded = generate(clean, days);
+    n = seeded.length;
+    cache = { from: d, to: { ...clean, entries: [...clean.entries, ...seeded] } };
+    return cache.to;
+  });
+  // The updater runs when React renders, so report once that has happened.
+  return new Promise((resolve) => setTimeout(() => resolve(n), 100));
+}
+
+/** Remove sample data only; anything you logged yourself is kept. */
+export function clearTestData(setData: SetData) {
+  setData(withoutSeed);
+}
+
+export function install(setData: SetData) {
   const w = window as unknown as Record<string, unknown>;
   if (w.seedTestData) return; // StrictMode runs effects twice in dev
 
-  /**
-   * Replace any previous sample data with `days` days of it (before today) for every activity.
-   * With no activities, adds a few sample ones first.
-   */
-  w.seedTestData = (days = 30) => {
-    // StrictMode calls updaters twice; cache so both calls return the same random data.
-    let cache: { from: Data; to: Data } | undefined;
-    let n = 0;
-    setData((d) => {
-      if (cache?.from === d) return cache.to;
-      let clean = withoutSeed(d);
-      if (!clean.activities.length) clean = { ...clean, activities: sampleActivities() };
-      const seeded = generate(clean, days);
-      n = seeded.length;
-      cache = { from: d, to: { ...clean, entries: [...clean.entries, ...seeded] } };
-      return cache.to;
-    });
-    // The updater runs when React renders, so report once that has happened.
-    setTimeout(() => console.log(`Seeded ${n} sample timestamps over ${days} days.`), 100);
+  w.seedTestData = async (days = 30) => {
+    const n = await seedTestData(setData, days);
+    console.log(`Seeded ${n} sample timestamps over ${days} days.`);
   };
 
-  /** Remove sample data only; anything you logged yourself is kept. */
   w.clearTestData = () => {
-    setData(withoutSeed);
+    clearTestData(setData);
     console.log('Removed sample timestamps.');
   };
 

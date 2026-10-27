@@ -4,7 +4,7 @@ import { mergeRows, type Entry, type Store } from '../store';
 import { fromCsv, saveCsv, toCsv } from '../csv';
 import Sheet from '../components/Sheet';
 import Header from '../components/Header';
-import { ChevronRight, ChevronUpDown, ImportIcon, PlusIcon, ShareIcon } from '../components/Icons';
+import { ChevronRight, ChevronUpDown, GlobeIcon, ImportIcon, MailIcon, PlusIcon, ShareIcon } from '../components/Icons';
 import { displayColor, useTheme } from '../theme';
 import { fmtTime } from '../format';
 
@@ -122,6 +122,24 @@ export default function History({ store }: { store: Store }) {
       <p className="footnote">
         {data.entries.length} {data.entries.length === 1 ? 'entry' : 'entries'} stored on this device. Export now and then to keep a backup.
       </p>
+
+      <h3 className="list-header">About</h3>
+      <div className="group list">
+        <a className="row" href="https://gauravchl.com" target="_blank" rel="noopener">
+          <img className="avatar" src="./gaurav.jpg" alt="" width={44} height={44} />
+          <span className="row-text">
+            <span className="row-title">Gaurav Chikhale</span>
+            <span className="row-sub wrap">Built this for myself, sharing it with you</span>
+          </span>
+        </a>
+        <a className="row tint" href="https://gauravchl.com" target="_blank" rel="noopener">
+          <GlobeIcon width={19} height={19} /> gauravchl.com
+        </a>
+        <a className="row tint" href="mailto:mail@gauravchl.com">
+          <MailIcon width={19} height={19} /> mail@gauravchl.com
+        </a>
+      </div>
+      <p className="footnote">Questions or ideas? I'd love to hear them.</p>
       <input
         ref={fileRef} type="file" accept=".csv,text/csv" hidden
         onChange={(e) => {

@@ -168,8 +168,13 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--tint); outl
   font-size: 13px; line-height: 18px; letter-spacing: -0.006em; color: var(--label-2);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums;
 }
+.row-sub.wrap { white-space: normal; }
 .row-detail { color: var(--label-2); font-variant-numeric: tabular-nums; }
 .chevron { color: var(--label-3); flex: none; margin-right: -4px; }
+a.row { color: inherit; text-decoration: none; }
+a.row.tint { color: var(--tint); }
+a.row:focus-visible { outline: 2px solid var(--tint); outline-offset: -2px; }
+.avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: none; background: var(--fill); }
 
 /* emoji in a tinted rounded square, like Settings / Health icons */
 .glyph {

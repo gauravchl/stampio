@@ -60,6 +60,20 @@ export const ImportIcon = (p: SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+export const GlobeIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)} strokeWidth={1.8}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M3.5 12h17M12 3.5c2.3 2.4 3.5 5.2 3.5 8.5s-1.2 6.1-3.5 8.5c-2.3-2.4-3.5-5.2-3.5-8.5s1.2-6.1 3.5-8.5z" />
+  </svg>
+);
+
+export const MailIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)} strokeWidth={1.8}>
+    <rect x="3.5" y="5.5" width="17" height="13" rx="2" />
+    <path d="M4 7l8 6 8-6" />
+  </svg>
+);
+
 export const MoonIcon = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)} stroke="none" fill="currentColor">
     <path d="M20.2 14.6A8.5 8.5 0 0 1 9.4 3.8a.6.6 0 0 0-.8-.7A9 9 0 1 0 20.9 15.4a.6.6 0 0 0-.7-.8z" />

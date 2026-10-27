@@ -55,6 +55,12 @@ async function shoot(theme) {
   await page.waitForTimeout(650);
   await page.screenshot({ path: `${OUT}/logged-${theme}.png` });
 
+  await page.waitForTimeout(4000); // let the banner go away
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: `${OUT}/edit-${theme}.png` });
+  await page.getByRole('button', { name: 'Done' }).click();
+
   await page.goto(url + '#trends');
   await page.waitForSelector('canvas');
   await page.waitForTimeout(500);
@@ -66,6 +72,8 @@ async function shoot(theme) {
 
   await page.goto(url + '#history');
   await page.waitForSelector('.entry-row');
+  await page.evaluate(() => scrollTo(0, 0));
+  await page.waitForTimeout(200);
   await page.screenshot({ path: `${OUT}/history-${theme}.png` });
 
   await page.goto(url + '#today');

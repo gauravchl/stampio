@@ -246,6 +246,18 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--tint); outl
 .tile.jiggle:nth-child(2n) { animation-delay: -0.14s; }
 @keyframes jiggle { from { rotate: -1.2deg; } to { rotate: 1.2deg; } }
 
+/* Edit mode: tiles are dragged rather than scrolled, so the page can't steal the gesture. */
+.grid.editing .tile { touch-action: none; }
+.tile.dragging {
+  z-index: 2;
+  animation: none;
+  transform: scale(1.06);
+  transition: transform 0.2s var(--ease-spring);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.22);
+  cursor: grabbing;
+}
+.reorder-hint { margin: -14px 4px 18px; }
+
 /* ---------- banner (logged + undo) ---------- */
 .banner {
   position: fixed; z-index: 25;

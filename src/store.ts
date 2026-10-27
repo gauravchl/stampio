@@ -88,6 +88,17 @@ export function useStore() {
     setData((d) => ({ ...d, activities: d.activities.map((a) => (a.id === id ? { ...a, ...patch } : a)) }));
   }, []);
 
+  /** Put activities in the given id order; any not listed keep their place at the end. */
+  const reorderActivities = useCallback((ids: string[]) => {
+    setData((d) => {
+      const rank = new Map(ids.map((id, i) => [id, i]));
+      const activities = [...d.activities].sort(
+        (a, b) => (rank.get(a.id) ?? Infinity) - (rank.get(b.id) ?? Infinity),
+      );
+      return { ...d, activities };
+    });
+  }, []);
+
   const deleteActivity = useCallback((id: string) => {
     setData((d) => ({
       activities: d.activities.filter((a) => a.id !== id),
@@ -110,7 +121,7 @@ export function useStore() {
   }, []);
 
   return {
-    data, addActivity, updateActivity, deleteActivity,
+    data, addActivity, updateActivity, reorderActivities, deleteActivity,
     logEntry, updateEntry, deleteEntry, replaceData: setData,
   };
 }

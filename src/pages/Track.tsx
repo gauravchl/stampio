@@ -8,11 +8,12 @@ import { PlusIcon } from '../components/Icons';
 import { displayColor, useTheme } from '../theme';
 import { fmtTime, relativeDay } from '../format';
 import { haptic } from '../haptics';
+import { useDragReorder } from '../reorder';
 
 type SheetState = { mode: 'new' } | { mode: 'edit'; activity: Activity } | null;
 
 export default function Track({ store }: { store: Store }) {
-  const { data, logEntry, deleteEntry, addActivity, updateActivity, deleteActivity } = store;
+  const { data, logEntry, deleteEntry, addActivity, updateActivity, reorderActivities, deleteActivity } = store;
   const { theme } = useTheme();
   const [editing, setEditing] = useState(false);
   const [sheet, setSheet] = useState<SheetState>(null);
@@ -38,6 +39,13 @@ export default function Track({ store }: { store: Store }) {
     }
     return m;
   }, [data.entries]);
+
+  const byId = useMemo(() => new Map(data.activities.map((a) => [a.id, a])), [data.activities]);
+  const reorder = useDragReorder(
+    useMemo(() => data.activities.map((a) => a.id), [data.activities]),
+    editing,
+    reorderActivities,
+  );
 
   const openSheet = (s: SheetState) => {
     setValid(s?.mode === 'edit');
@@ -71,8 +79,10 @@ export default function Track({ store }: { store: Store }) {
         }
       />
 
-      <div className="grid">
-        {data.activities.map((a) => {
+      <div className={`grid ${editing ? 'editing' : ''}`}>
+        {reorder.list.map((id) => {
+          const a = byId.get(id);
+          if (!a) return null;
           const s = stats.get(a.id);
           // One short line: today's time, otherwise just the day it was last logged.
           const caption = editing
@@ -85,8 +95,9 @@ export default function Track({ store }: { store: Store }) {
           return (
             <button
               key={a.id}
-              className={`tile ${pulse === a.id ? 'pulse' : ''} ${editing ? 'jiggle' : ''}`}
-              style={{ '--c': displayColor(a.color, theme) } as React.CSSProperties}
+              {...reorder.bind(a.id)}
+              className={`tile ${pulse === a.id ? 'pulse' : ''} ${editing ? 'jiggle' : ''} ${reorder.dragId === a.id ? 'dragging' : ''}`}
+              style={{ ...({ '--c': displayColor(a.color, theme) } as React.CSSProperties), ...reorder.style(a.id) }}
               onClick={() => tap(a)}
               aria-label={editing ? `Edit ${a.name}` : `Log ${a.name}`}
             >
@@ -106,6 +117,7 @@ export default function Track({ store }: { store: Store }) {
           );
         })}
       </div>
+      {editing && <p className="footnote reorder-hint">Drag tiles to reorder. Tap one to edit it.</p>}
 
       <div className="group">
         <button className="row tint" onClick={() => openSheet({ mode: 'new' })}>

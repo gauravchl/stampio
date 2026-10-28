@@ -3,13 +3,15 @@ import { useStore } from './store';
 import Track from './pages/Track';
 import Chart from './pages/Chart';
 import History from './pages/History';
-import { HistoryIcon, TodayIcon, TrendsIcon } from './components/Icons';
+import Settings from './pages/Settings';
+import { HistoryIcon, SettingsIcon, TodayIcon, TrendsIcon } from './components/Icons';
 
-type Tab = 'today' | 'trends' | 'history';
+type Tab = 'today' | 'trends' | 'history' | 'settings';
 const TABS: { id: Tab; label: string; Icon: ComponentType<SVGProps<SVGSVGElement>> }[] = [
   { id: 'today', label: 'Today', Icon: TodayIcon },
   { id: 'trends', label: 'Trends', Icon: TrendsIcon },
   { id: 'history', label: 'History', Icon: HistoryIcon },
+  { id: 'settings', label: 'Settings', Icon: SettingsIcon },
 ];
 
 const fromHash = (): Tab => {
@@ -47,6 +49,7 @@ export default function App() {
         {tab === 'today' && <Track store={store} />}
         {tab === 'trends' && <Chart store={store} />}
         {tab === 'history' && <History store={store} />}
+        {tab === 'settings' && <Settings store={store} />}
       </main>
       <nav className="tabbar">
         {TABS.map(({ id, label, Icon }) => (

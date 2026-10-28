@@ -7,6 +7,7 @@ import 'chartjs-adapter-date-fns';
 import { Line } from 'react-chartjs-2';
 import { addDays, differenceInCalendarDays, format, startOfDay, subDays } from 'date-fns';
 import type { Store } from '../store';
+import { loadSettings } from '../settings';
 import Header from '../components/Header';
 import { CheckIcon, ChevronRight } from '../components/Icons';
 import { displayColor, useTheme, type Theme } from '../theme';
@@ -96,6 +97,11 @@ export default function Chart({ store }: { store: Store }) {
   const live = useRef<View | null>(null);
   const { theme } = useTheme();
   const t = CHART_THEME[theme];
+  // The chart's day runs from the start hour, so shift logs back by it before bucketing into days.
+  const [{ dayStartHour }] = useState(loadSettings);
+  const startMin = dayStartHour * 60;
+  const shift = startMin * 60_000;
+  const offsetOf = (ts: number) => (minutesOfDay(ts) - startMin + 1440) % 1440;
   useEffect(() => {
     try { localStorage.setItem(SEL_KEY, JSON.stringify(sel)); } catch { /* ignore */ }
   }, [sel]);
@@ -104,10 +110,10 @@ export default function Chart({ store }: { store: Store }) {
   const range = RANGES.find((r) => r.id === sel.range)!;
   const days = range.days;
   const pageable = days !== Infinity;
-  const todayStart = startOfDay(new Date()).getTime();
+  const todayStart = startOfDay(Date.now() - shift).getTime();
   const todayEnd = addDays(todayStart, 1).getTime();
   const firstTs = entries.reduce((m, e) => Math.min(m, e.ts), Infinity);
-  const firstStart = Number.isFinite(firstTs) ? startOfDay(firstTs).getTime() : todayStart;
+  const firstStart = Number.isFinite(firstTs) ? startOfDay(firstTs - shift).getTime() : todayStart;
 
   // Fixed-length ranges page back in time: page 0 ends today, page 1 is the window before it, and so on.
   const maxPage = pageable ? Math.max(0, Math.ceil(differenceInCalendarDays(todayEnd, firstStart) / days) - 1) : 0;
@@ -121,9 +127,10 @@ export default function Chart({ store }: { store: Store }) {
 
   const all = activities.map((a) => {
     const allPts = entries.filter((e) => e.activityId === a.id).sort((p, q) => p.ts - q.ts);
-    const pts = allPts.filter((e) => e.ts >= since && e.ts < until);
+    const pts = allPts.filter((e) => e.ts - shift >= since && e.ts - shift < until);
     const mins = pts.map((e) => minutesOfDay(e.ts));
-    return { activity: a, allPts, pts, mins, color: displayColor(a.color, theme) };
+    const offs = pts.map((e) => offsetOf(e.ts));
+    return { activity: a, allPts, pts, mins, offs, color: displayColor(a.color, theme) };
   });
   const series = all.filter((s) => !hidden.has(s.activity.id));
   const total = series.reduce((n, s) => n + s.pts.length, 0);
@@ -132,7 +139,7 @@ export default function Chart({ store }: { store: Store }) {
   // Headline above the chart, like Health: one activity shows its average time, several show a count.
   const single = series.length === 1 && series[0].mins.length ? series[0] : null;
   const avg = single ? minuteParts(meanTime(single.mins)) : null;
-  const last = pg === 0 ? Date.now() : until - 1;
+  const last = pg === 0 ? Date.now() - shift : until - 1;
   const sameYear = new Date(since).getFullYear() === new Date(last).getFullYear();
   const rangeLabel = `${format(since, sameYear ? 'MMM d' : 'MMM d, yyyy')} – ${format(last, 'MMM d, yyyy')}`;
 
@@ -143,7 +150,7 @@ export default function Chart({ store }: { store: Store }) {
       label: a.name,
       emoji: a.emoji,
       emojiSize: showEmoji ? 13 : 0,
-      data: allPts.map((e) => ({ x: startOfDay(e.ts).getTime() + 12 * 3600_000, y: minutesOfDay(e.ts), ts: e.ts })),
+      data: allPts.map((e) => ({ x: startOfDay(e.ts - shift).getTime() + 12 * 3600_000, y: offsetOf(e.ts), ts: e.ts })),
       borderColor: color,
       backgroundColor: color,
       borderWidth: 2,
@@ -202,7 +209,7 @@ export default function Chart({ store }: { store: Store }) {
         reverse: true,
         min: 0,
         max: 1440,
-        ticks: { color: t.text, font: { size: 11, weight: 500 }, stepSize: 360, padding: 6, callback: (v) => hourLabel(Number(v)) },
+        ticks: { color: t.text, font: { size: 11, weight: 500 }, stepSize: 360, padding: 6, callback: (v) => hourLabel(Number(v) + startMin) },
         grid: { color: t.grid, drawTicks: false },
         border: { display: false },
       },
@@ -439,7 +446,7 @@ export default function Chart({ store }: { store: Store }) {
         <span className="section-note">Tap to show or hide</span>
       </div>
       <div className="group list">
-        {all.map(({ activity: a, pts, mins, color }) => {
+        {all.map(({ activity: a, pts, mins, offs, color }) => {
           const on = !hidden.has(a.id);
           return (
             <button key={a.id} className="row legend-row" onClick={() => toggle(a.id)} aria-pressed={on}>
@@ -450,7 +457,7 @@ export default function Chart({ store }: { store: Store }) {
                 <span className="row-title">{a.emoji} {a.name}</span>
                 <span className="row-sub">
                   {mins.length
-                    ? `${pts.length} ${pts.length === 1 ? 'log' : 'logs'} · ${fmtMinutes(Math.min(...mins))} – ${fmtMinutes(Math.max(...mins))}`
+                    ? `${pts.length} ${pts.length === 1 ? 'log' : 'logs'} · ${fmtMinutes(Math.min(...offs) + startMin)} – ${fmtMinutes(Math.max(...offs) + startMin)}`
                     : 'No logs in this range'}
                 </span>
               </span>

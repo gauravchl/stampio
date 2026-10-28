@@ -26,7 +26,8 @@ https://stampio.netlify.app
 
 - **Today**: one card per activity showing the last logged time. Tap a card to log now, with a haptic tap on iOS 18 and a banner you can **Undo**. **Edit** to drag tiles into a new order, or tap one to rename, recolor or delete it; **Add Activity** to create one.
 - **Trends**: one line per activity, with the day across and the time of day down. Switch between week, month, 3 months and all time, and swipe (or use the arrows) to page back through earlier periods. The list under the chart toggles each line and shows its average time and usual range.
-- **History**: every logged time grouped by day, filterable by activity. Tap one to change or delete it, or **+** to add one you missed. **Export as CSV** / **Import from CSV** (import merges and skips duplicates — handy for backups). **Delete All Data** wipes activities and entries after a confirmation.
+- **History**: every logged time grouped by day, filterable by activity. Tap one to change or delete it, or **+** to add one you missed.
+- **Settings**: **Start of Day** for the Trends chart (4 AM by default, so late-night logs count toward the day before). **Export as CSV** / **Import from CSV** (import merges and skips duplicates — handy for backups). **Delete All Data** wipes activities and entries after a confirmation.
 - **Light and dark** appearance (light by default), using Apple's system colors.
 - Times follow the device's 12/24-hour setting.
 
